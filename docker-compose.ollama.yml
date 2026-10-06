@@ -3,7 +3,7 @@
 #   CPU only:     docker compose -f docker-compose.yml -f docker-compose.ollama.yml up --build -d
 #   NVIDIA GPU:   docker compose -f docker-compose.yml -f docker-compose.ollama.yml -f docker-compose.ollama.gpu.yml up --build -d
 #
-# Model: OLLAMA_MODEL in .env (default gemma4:e4b, ~10 GB download on first start).
+# Model: OLLAMA_MODEL in .env (default gemma4:e4b, ~6.6 GB download on first start).
 # Models are stored in the `ollama` volume, so the pull happens only once.
 services:
   ollama:

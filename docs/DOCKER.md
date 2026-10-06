@@ -121,7 +121,7 @@ docker compose up --build -d
 
 This option needs nothing installed on the host apart from Docker. An add-on Compose file starts an **Ollama container**, **pulls the model automatically**, and points both apps at it. Models are kept in the `ollama` volume, so the download happens only once.
 
-**NVIDIA GPU** (recommended; needs an NVIDIA driver, plus Docker Desktop with the WSL2 backend or the NVIDIA Container Toolkit on Linux):
+**NVIDIA GPU** (recommended; needs an NVIDIA driver, plus Docker Desktop with the WSL2 backend or the NVIDIA Container Toolkit on Linux). Measured on an RTX 4080 Laptop: about 1.6 s per agent call, 7–14 s per loan case, 100% GPU:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.ollama.yml -f docker-compose.ollama.gpu.yml up --build -d
@@ -136,7 +136,7 @@ docker compose -f docker-compose.yml -f docker-compose.ollama.yml up --build -d
 What happens on start:
 
 1. `ollama` starts and becomes healthy.
-2. `ollama-pull` runs `ollama pull $OLLAMA_MODEL` (default `gemma4:e4b`, about 10 GB on first run) and exits.
+2. `ollama-pull` runs `ollama pull $OLLAMA_MODEL` (default `gemma4:e4b`, about 6.6 GB on first run) and exits.
 3. The two apps start only after the pull succeeds, with `LLM_MODE=ollama` and `OLLAMA_BASE_URL=http://ollama:11434/v1`.
 
 Follow the download progress:

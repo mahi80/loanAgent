@@ -56,7 +56,7 @@ CPU only (slower):
 docker compose -f docker-compose.yml -f docker-compose.ollama.yml up --build -d
 ```
 
-The first start downloads `gemma4:e4b` (about 10 GB) into the `ollama` volume, and the apps start once the pull finishes. Details: [docs/DOCKER.md](docs/DOCKER.md#ollama-inside-docker-no-host-install).
+The first start downloads the Ollama image (about 3 GB) and `gemma4:e4b` (about 6.6 GB) into the `ollama` volume. On an RTX 4080 Laptop this runs at about 1.6 s per agent call. The apps start once the pull finishes, and later starts reuse the volume. Details: [docs/DOCKER.md](docs/DOCKER.md#ollama-inside-docker-no-host-install).
 
 ### LLM modes (`.env`)
 
