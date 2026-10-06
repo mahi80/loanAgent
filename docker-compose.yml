@@ -1,0 +1,36 @@
+# Runs both prototypes locally:
+#   docker compose up --build
+#   A1 loan lifecycle  -> http://localhost:8501
+#   A2 demand response -> http://localhost:8502
+# LLM: put AZURE_OPENAI_* or OPENAI_API_KEY in .env (optional; mock mode otherwise).
+x-app: &app
+  build: .
+  image: loanagent-fde:latest
+  env_file:
+    - path: .env
+      required: false
+  volumes:
+    - runtime:/app/runtime   # audit logs + mock SAP outbox survive restarts
+  restart: unless-stopped
+
+services:
+  loan-lifecycle:
+    <<: *app
+    container_name: a1-loan-lifecycle
+    environment:
+      APP: a1_loan_lifecycle
+      PORT: "8501"
+    ports:
+      - "8501:8501"
+
+  demand-response:
+    <<: *app
+    container_name: a2-demand-response
+    environment:
+      APP: a2_chem_demand
+      PORT: "8502"
+    ports:
+      - "8502:8502"
+
+volumes:
+  runtime:

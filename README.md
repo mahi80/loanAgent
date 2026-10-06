@@ -27,6 +27,23 @@ streamlit run a2_chem_demand/app.py
 
 **LLM.** Copy `.env.example` to `.env` and set either `AZURE_OPENAI_*` (Azure OpenAI) or `OPENAI_API_KEY` (OpenAI API). Without credentials, the agents run in **deterministic mock mode**, so every demo works offline and gives the same result each time. `LLM_MODE=auto|azure|openai|mock`. `.env` is git-ignored.
 
+### Run in Docker
+
+Both prototypes run from one image with two services:
+
+```bash
+docker compose up --build -d
+```
+
+- A1 loan lifecycle: http://localhost:8501
+- A2 demand response: http://localhost:8502
+
+`.env` is optional and is picked up automatically. Audit logs and the mock SAP outbox are kept in the `runtime` volume. To stop the services:
+
+```bash
+docker compose down
+```
+
 **Rebuild the diagrams and decks:**
 
 ```bash
