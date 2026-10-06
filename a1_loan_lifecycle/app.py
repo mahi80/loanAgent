@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from agents import DOCS, disbursement, portfolio  # noqa: E402
 from agents.approval import AUTHORITY_LEVELS, DECISIONS  # noqa: E402
 from orchestrator import PIPELINE, LoanOrchestrator, list_applications  # noqa: E402
+from knowledge import assistant  # noqa: E402
 from shared import vsm_view  # noqa: E402
 
 st.set_page_config(page_title="Agentic Loan Lifecycle", page_icon="🏦", layout="wide")
@@ -40,17 +41,51 @@ with st.sidebar:
         with st.spinner("Agents working..."):
             st.session_state.cases[app_id] = orch.run_until_gate(apps[app_id])
     st.divider()
-    st.subheader("Ask the credit policy (RAG)")
-    q = st.text_input("Question", placeholder="e.g. what is the LTV limit?")
-    if q:
-        for hit in orch.retriever.search(q, k=2):
-            st.markdown(f"**{hit['id']} {hit['title']}** _(score {hit['score']})_\n\n{hit['text']}")
+    st.caption("💬 Ask the credit policy in the **Policy assistant** tab.")
     st.divider()
     st.caption("All data is synthetic. AI outputs are decision support; credit decisions are taken by humans.")
 
-tab_vsm, tab_flow, tab_post, tab_port, tab_audit = st.tabs(
+tab_vsm, tab_flow, tab_post, tab_port, tab_chat, tab_audit = st.tabs(
     ["⓪ Value stream (why these agents)", "① Origination → Decision", "② Disbursement CPs",
-     "③ Portfolio monitoring", "④ Audit & observability"])
+     "③ Portfolio monitoring", "💬 Policy assistant (RAG)", "④ Audit & observability"])
+
+# ------------------------------------------------------------------ policy assistant
+with tab_chat:
+    st.caption(f"Answers come only from the credit policy (hybrid retrieval → {orch.llm.model_name}), with clause "
+               "citations. Authority and threshold arithmetic is done by the rules engine, not the LLM.")
+    chat = st.session_state.setdefault("chat", [])
+    examples = ["What is the LTV limit?", "Can we lend to a company whose director is a politician?",
+                "Who approves a $15M loan with a policy exception?", "What is needed before disbursement?"]
+    ex_cols = st.columns(len(examples))
+    clicked = next((e for c, e in zip(ex_cols, examples) if c.button(e, use_container_width=True)), None)
+    if chat and st.button("Clear conversation"):
+        chat.clear()
+        st.rerun()
+    box = st.container(height=480)
+    for m in chat:
+        with box.chat_message(m["role"]):
+            st.markdown(m["content"].replace("$", "\\$"))
+            if m.get("meta"):
+                meta = m["meta"]
+                badge = "✅ grounded in cited clauses" if meta["grounded"] else "⚠️ check citations"
+                st.caption(f"{badge} · cites {', '.join(meta['citations']) or '-'}")
+                if meta.get("tool_facts") or meta.get("sources"):
+                    with st.expander("Sources & tools used"):
+                        for f in meta.get("tool_facts", []):
+                            st.markdown(f"🧮 {f}".replace("$", "\\$"))
+                        for s in meta.get("sources", []):
+                            st.markdown(f"**{s['id']} {s['title']}** · relevance {s['score']}\n\n> {s['text']}")
+    question = st.chat_input("Ask about the credit policy, e.g. minimum DSCR for a term loan") or clicked
+    if question:
+        chat.append({"role": "user", "content": question})
+        with st.spinner("Retrieving policy and drafting answer..."):
+            res = assistant.answer(question, orch.retriever, orch.llm,
+                                   history=[{"role": m["role"], "content": m["content"]} for m in chat[:-1]])
+        chat.append({"role": "assistant", "content": res["answer"], "meta": res})
+        orch.audit.record("POLICY-QA", assistant.NAME, "qa.answered",
+                          {"question": question[:200], "citations": res["citations"], "grounded": res["grounded"]},
+                          model=orch.llm.model_name)
+        st.rerun()
 
 # ------------------------------------------------------------------ tab 0
 with tab_vsm:

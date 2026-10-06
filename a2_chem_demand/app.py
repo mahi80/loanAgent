@@ -54,6 +54,7 @@ t_opp, t_vsm, t_fc, t_act, t_aud = st.tabs(["⓪ Opportunity map", "① Value st
 # ------------------------------------------------------------------ opportunity map
 with t_opp:
     opp = pd.read_csv(HERE / "data" / "opportunities.csv")
+    opp[["value_score", "feasibility_score"]] = opp[["value_score", "feasibility_score"]].astype(float)  # avoid int8 plot arrays
     opp["priority_score"] = opp.value_score * opp.feasibility_score
     opp = opp.sort_values(["wave", "priority_score"], ascending=[True, False])
     c1, c2 = st.columns([3, 2])

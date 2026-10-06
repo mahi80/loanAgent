@@ -14,6 +14,7 @@ Loan application → ingest supporting documents → extract information → ide
 | ① Origination → Decision | Agent pipeline with timings, evidence-backed extraction, missing-info email draft, RAG-cited policy checks, risk grade, recommendation, credit memo, human gate and downloadable decision summary |
 | ② Disbursement CPs | Condition-precedent checklist that blocks release until every CP is evidenced |
 | ③ Portfolio monitoring | Covenant and early-warning (EWS) scan over 10 synthetic loans, with notes on Red accounts |
+| 💬 Policy assistant (RAG) | Chat over the credit policy. Hybrid retrieval (word + character TF-IDF with banking-term expansion), then answers from the LLM that cite only the retrieved clauses. Threshold and authority maths is done by the rules engine. Off-topic questions are refused, and every Q&A is audited. Retrieval eval: `python a1_loan_lifecycle/knowledge/eval_retriever.py` (13/13). |
 | ④ Audit & observability | Hash-chain validity, audit events, LLM telemetry (mode, latency, tokens) |
 
 ### Demo cases (synthetic)
@@ -38,7 +39,7 @@ Controls to try: approving above your role's authority is blocked, and overridin
 | Disbursement / CP | `agents/disbursement.py` | Gates disbursement until every CP is evidenced |
 | Portfolio Monitoring | `agents/portfolio.py` | Quarterly covenant and EWS rules (CP-8.1) |
 
-The orchestrator (`orchestrator.py`) is an explicit state machine that times each step and writes it to the audit log. Its nodes map one-to-one onto LangGraph, Azure AI Foundry Agent Service or Durable Functions in production. RAG uses TF-IDF over `knowledge/credit_policy.md` in the prototype; Azure AI Search replaces it in production.
+The orchestrator (`orchestrator.py`) is an explicit state machine that times each step and writes it to the audit log. Its nodes map one-to-one onto LangGraph, Azure AI Foundry Agent Service or Durable Functions in production. RAG uses hybrid TF-IDF over `knowledge/credit_policy.md` in the prototype; Azure AI Search (hybrid vector + semantic ranker) replaces it in production.
 
 ## Value stream map (current state + agent overlay)
 
