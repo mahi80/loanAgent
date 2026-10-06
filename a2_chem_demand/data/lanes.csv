@@ -1,0 +1,13 @@
+from_region,from_dc,to_region,to_dc,cost_per_t,transit_days,expedite_cost_per_t,expedite_days
+NAM,DC-Houston,EU,DC-Rotterdam,95,16,380,4
+EU,DC-Rotterdam,NAM,DC-Houston,95,16,380,4
+NAM,DC-Houston,APAC,DC-Singapore,140,24,560,4
+APAC,DC-Singapore,NAM,DC-Houston,140,24,560,4
+NAM,DC-Houston,LATAM,DC-Sao-Paulo,85,12,340,4
+LATAM,DC-Sao-Paulo,NAM,DC-Houston,85,12,340,4
+EU,DC-Rotterdam,APAC,DC-Singapore,120,21,480,4
+APAC,DC-Singapore,EU,DC-Rotterdam,120,21,480,4
+EU,DC-Rotterdam,LATAM,DC-Sao-Paulo,110,18,440,4
+LATAM,DC-Sao-Paulo,EU,DC-Rotterdam,110,18,440,4
+APAC,DC-Singapore,LATAM,DC-Sao-Paulo,150,28,600,4
+LATAM,DC-Sao-Paulo,APAC,DC-Singapore,150,28,600,4

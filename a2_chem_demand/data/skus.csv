@@ -1,0 +1,13 @@
+sku,name,family,price_per_t,margin_per_t,base_t_week
+EPX-200,Liquid Epoxy Resin,Epoxy,3200,700,120
+EPX-310,Epoxy Novolac Resin,Epoxy,4100,950,45
+PVC-K67,PVC Resin K67,PVC,1100,180,380
+PVC-K57,PVC Resin K57,PVC,1150,190,160
+POL-3000,Polyether Polyol 3000,Polyols,1900,380,140
+POL-5600,Polymer Polyol 5600,Polyols,2100,420,70
+SOL-MEK,Methyl Ethyl Ketone,Solvents,1300,210,200
+SOL-BAC,Butyl Acetate,Solvents,1250,200,150
+SUR-LAS,Linear Alkylbenzene Sulfonate,Surfactants,1600,310,180
+SUR-AEO,Alcohol Ethoxylate,Surfactants,1800,350,90
+ADD-UV1,UV Stabilizer,Additives,9500,2600,12
+ADD-AO2,Phenolic Antioxidant,Additives,8200,2200,15

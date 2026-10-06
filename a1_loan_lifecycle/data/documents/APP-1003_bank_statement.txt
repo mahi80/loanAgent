@@ -1,0 +1,5 @@
+BANK STATEMENT SUMMARY - 12 MONTHS (Oct 2025 - Sep 2026)
+Account Holder: Meridian Infra Projects SPV Ltd
+Average Monthly Balance: 310,000
+Cheque Bounces (12m): 5
+Overdraft Utilisation Peak: 98%

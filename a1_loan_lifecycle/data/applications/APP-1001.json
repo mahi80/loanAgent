@@ -1,0 +1,14 @@
+{
+  "application_id": "APP-1001",
+  "borrower": "Greenfield Logistics Pvt Ltd",
+  "sector": "Logistics & Warehousing",
+  "country": "India",
+  "product": "term_loan",
+  "amount_usd": 4000000,
+  "tenor_years": 5,
+  "interest_rate": 0.095,
+  "purpose": "Fleet expansion - 60 electric trucks and warehouse automation",
+  "relationship_manager": "A. Mehta",
+  "submitted_on": "2026-09-22",
+  "documents": ["APP-1001_financial_statements.txt", "APP-1001_kyc.txt", "APP-1001_bank_statement.txt", "APP-1001_collateral_valuation.txt"]
+}

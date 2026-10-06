@@ -1,0 +1,11 @@
+loan_id,borrower,sector,outstanding_usd,dscr_covenant,leverage_covenant,dscr_q1,dscr_q2,dscr_q3,leverage_q3,days_past_due,last_valuation
+L-2201,Coastal Cold Chain Ltd,Logistics,3200000,1.25,4.0,1.82,1.76,1.71,2.6,0,2026-03-10
+L-2202,Vertex Textiles Ltd,Textiles,5400000,1.25,4.0,1.48,1.36,1.31,3.7,12,2025-07-21
+L-2203,Nova Pharma Packaging,Pharma,2100000,1.25,4.0,2.10,2.15,2.22,1.9,0,2026-05-02
+L-2204,Indus Steel Fabricators,Metals,8800000,1.25,4.0,1.40,1.29,1.18,4.3,45,2025-04-18
+L-2205,BluePeak Hotels,Hospitality,6100000,1.30,4.5,1.62,1.55,1.57,3.9,0,2026-01-15
+L-2206,Orbit Auto Components,Auto,4300000,1.25,4.0,1.35,1.33,1.30,3.8,5,2026-02-28
+L-2207,Harbor Agro Exports,Agri,1900000,1.25,4.0,1.95,1.90,1.97,2.2,0,2026-06-30
+L-2208,Crestline Realty Phase II,Real Estate,12500000,1.20,5.0,1.30,1.21,1.12,5.4,62,2024-12-05
+L-2209,Zenith Solar Parks,Power,15000000,1.20,6.0,1.45,1.44,1.46,5.1,0,2026-04-11
+L-2210,Metro Diagnostics Chain,Healthcare,2700000,1.25,4.0,1.70,1.64,1.58,2.9,0,2026-07-19

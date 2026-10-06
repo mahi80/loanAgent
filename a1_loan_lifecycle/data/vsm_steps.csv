@@ -1,0 +1,10 @@
+step_no,step,fte,va_h,nva_h,wait_d,feasibility,agent,future_va_h,future_nva_h,future_wait_d,nva_example
+1,Origination / intake,3,1.0,2.0,2,4,Intake Agent,1.0,0.5,0.5,Re-keying application into LOS
+2,Doc collection & completeness,3,0.5,4.0,6,5,Intake + Doc Intelligence (missing-info + auto-chase),0.5,0.5,1.5,Email chasing for documents
+3,Data extraction / spreading,4,1.5,4.5,2,5,Doc Intelligence Agent,1.5,0.5,0,Manual financial spreading
+4,KYC / AML / due diligence,4,2.0,3.0,3,4,Due-Diligence Agent,2.0,1.0,1,Multi-portal screening
+5,Policy / eligibility check,3,1.0,2.0,1,5,Rules engine + RAG,1.0,0.25,0,Manual checklist
+6,Appraisal & credit memo,5,6.0,6.0,4,4,Risk Agent (memo draft + observations),4.0,2.0,2,Memo drafting and formatting
+7,Approval (committee),3,1.5,1.5,5,2,Workflow Agent (routing + pre-read; human decides),1.5,0.5,2,Pack preparation and routing
+8,Documentation & CP check,3,2.0,3.0,4,4,Disbursement / Condition Agent,2.0,1.0,2,CP tracking in spreadsheets
+9,Disbursement,2,1.0,1.5,2,3,Later wave,1.0,0.5,1,Manual maker-checker hand-offs

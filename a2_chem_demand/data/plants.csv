@@ -1,0 +1,13 @@
+plant,region,family,weekly_capacity_t,planned_t_per_week,lead_time_weeks,reschedule_premium_per_t
+Plant-Texas,NAM,Epoxy,650,560,2,140
+Plant-Texas,NAM,PVC,1500,1380,1,60
+Plant-Texas,NAM,Solvents,900,720,1,50
+Plant-Antwerp,EU,Epoxy,420,330,2,160
+Plant-Antwerp,EU,PVC,1350,1300,1,70
+Plant-Antwerp,EU,Polyols,700,560,2,90
+Plant-Antwerp,EU,Additives,60,45,3,900
+Plant-Jurong,APAC,Epoxy,380,300,2,120
+Plant-Jurong,APAC,Surfactants,800,640,1,80
+Plant-Jurong,APAC,Polyols,500,410,2,85
+Plant-Camacari,LATAM,PVC,600,520,2,75
+Plant-Camacari,LATAM,Solvents,400,300,1,55

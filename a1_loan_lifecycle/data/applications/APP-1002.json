@@ -1,0 +1,14 @@
+{
+  "application_id": "APP-1002",
+  "borrower": "Sunrise Agro Foods Ltd",
+  "sector": "Food Processing",
+  "country": "India",
+  "product": "working_capital",
+  "amount_usd": 1500000,
+  "tenor_years": 1,
+  "interest_rate": 0.105,
+  "purpose": "Seasonal working capital for harvest procurement",
+  "relationship_manager": "R. Iyer",
+  "submitted_on": "2026-09-28",
+  "documents": ["APP-1002_financial_statements.txt", "APP-1002_kyc.txt"]
+}

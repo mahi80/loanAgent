@@ -1,0 +1,5 @@
+BANK STATEMENT SUMMARY - 12 MONTHS (Oct 2025 - Sep 2026)
+Account Holder: Greenfield Logistics Pvt Ltd
+Average Monthly Balance: 1,800,000
+Cheque Bounces (12m): 0
+Overdraft Utilisation Peak: 41%

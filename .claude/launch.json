@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {"name": "a1-loan", "runtimeExecutable": "python", "runtimeArgs": ["-m", "streamlit", "run", "a1_loan_lifecycle/app.py", "--server.port", "8501", "--server.headless", "true"], "port": 8501},
+    {"name": "a2-demand", "runtimeExecutable": "python", "runtimeArgs": ["-m", "streamlit", "run", "a2_chem_demand/app.py", "--server.port", "8502", "--server.headless", "true"], "port": 8502}
+  ]
+}

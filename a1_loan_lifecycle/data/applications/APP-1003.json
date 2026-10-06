@@ -1,0 +1,14 @@
+{
+  "application_id": "APP-1003",
+  "borrower": "Meridian Infra Projects SPV Ltd",
+  "sector": "Infrastructure - Toll Roads",
+  "country": "India",
+  "product": "project_finance",
+  "amount_usd": 28000000,
+  "tenor_years": 12,
+  "interest_rate": 0.11,
+  "purpose": "Construction of 64 km four-lane toll road (BOT concession)",
+  "relationship_manager": "S. Kapoor",
+  "submitted_on": "2026-09-30",
+  "documents": ["APP-1003_financial_statements.txt", "APP-1003_kyc.txt", "APP-1003_bank_statement.txt", "APP-1003_collateral_valuation.txt", "APP-1003_project_report.txt"]
+}
