@@ -91,7 +91,7 @@ def render_flow() -> None:
 
     with st.expander("2 · Document Intelligence Agent - extracted fields with evidence", expanded=False):
         df = pd.DataFrame([{"field": k, "value": "" if v["value"] is None else str(v["value"]), "confidence": v["confidence"], "grounded": "✅" if v["grounded"] else "⚠️",
-                            "source": v["source"], "evidence": v["evidence"]} for k, v in case["doc_intel"]["fields"].items()])
+                            "source": v["source"], "method": v.get("method", "llm"), "evidence": v["evidence"]} for k, v in case["doc_intel"]["fields"].items()])
         st.dataframe(df, hide_index=True, use_container_width=True)
         doc = st.selectbox("View source document", a["documents"])
         if (DOCS / doc).exists():

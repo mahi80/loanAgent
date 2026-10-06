@@ -88,6 +88,7 @@ def _grounded(value: Any, text: str) -> bool:
 
 def run(intake: dict[str, Any], llm: LLMClient) -> dict[str, Any]:
     extracted: dict[str, dict[str, Any]] = {}
+    llm_missed: list[str] = []
     for dtype, doc in intake["_docs"].items():
         fields = SCHEMA.get(dtype, {})
         if not fields:
@@ -101,11 +102,19 @@ def run(intake: dict[str, Any], llm: LLMClient) -> dict[str, Any]:
         )
         user = f"Document type: {dtype}\nFields: {json.dumps({k: v[1] for k, v in fields.items()})}\n---\n{text}"
         result = llm.complete_json(NAME, system, user, fallback=lambda t=text, f=fields: _regex_extract(t, f))
+        rules = _regex_extract(text, fields)["fields"]  # deterministic cross-check
         for name, (_, typ) in fields.items():
-            item = (result.get("fields") or {}).get(name) or {}
+            # small local models sometimes mis-nest JSON: accept the field wherever it landed
+            item = (result.get("fields") or {}).get(name) or result.get(name) or {}
+            if not isinstance(item, dict):
+                item = {"value": item, "confidence": 0.7}
             value = item.get("value")
             if typ == "num":
                 value = _to_num(value)
+            method = "llm"
+            if value is None and name in rules:  # LLM missed a value the parser can see
+                item, value, method = rules[name], rules[name]["value"], "rules (llm_missed)"
+                llm_missed.append(name)
             grounded = _grounded(value, doc["text"])
             extracted[name] = {
                 "value": value,
@@ -113,6 +122,8 @@ def run(intake: dict[str, Any], llm: LLMClient) -> dict[str, Any]:
                 "evidence": item.get("evidence"),
                 "source": doc["file"],
                 "grounded": grounded,
+                "method": method,
             }
     low_conf = [k for k, v in extracted.items() if v["value"] is not None and v["confidence"] < 0.8]
-    return {"fields": extracted, "low_confidence_fields": low_conf, "documents_processed": len(intake["_docs"])}
+    return {"fields": extracted, "low_confidence_fields": low_conf, "llm_missed_fields": llm_missed,
+            "documents_processed": len(intake["_docs"])}

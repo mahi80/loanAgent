@@ -27,6 +27,18 @@ streamlit run a2_chem_demand/app.py
 
 **LLM.** Copy `.env.example` to `.env` and set either `AZURE_OPENAI_*` (Azure OpenAI) or `OPENAI_API_KEY` (OpenAI API). Without credentials, the agents run in **deterministic mock mode**, so every demo works offline and gives the same result each time. `LLM_MODE=auto|azure|openai|mock`. `.env` is git-ignored.
 
+### Local LLM with Ollama (no API key)
+
+Set `LLM_MODE=ollama` and `OLLAMA_MODEL=gemma4:e4b` in `.env`. Docker reaches the host's Ollama through `host.docker.internal`. On an RTX 4080 Laptop GPU (12 GB), gemma4:e4b runs fully on the GPU at about 3–4 s per agent call, and each loan case takes 20–30 s end to end.
+
+Reasoning is switched off for speed (`OLLAMA_REASONING=none`). Fenced or mis-nested JSON is tolerated. Any field the model misses is filled by the rule-based parser and flagged `llm_missed`.
+
+If Ollama runs inside WSL, it is only reachable from Windows and Docker when nothing else listens on port 11434 on Windows. Quit the Windows Ollama app, then restart the WSL service so WSL forwards the port:
+
+```bash
+wsl -d Ubuntu -u root -- systemctl restart ollama
+```
+
 ### Run in Docker
 
 Both prototypes run from one image with two services:

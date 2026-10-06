@@ -3,7 +3,8 @@
 * ``azure`` mode calls Azure OpenAI; ``openai`` mode calls the OpenAI API (both chat completions, JSON mode).
 * ``mock`` mode returns a deterministic fallback supplied by the calling agent,
   so demos run offline and are reproducible.
-* ``auto`` (default) uses Azure if configured, else OpenAI if OPENAI_API_KEY is set, else mock.
+* ``ollama`` mode calls a local Ollama server (OpenAI-compatible API; data stays on the machine).
+* ``auto`` (default): Azure if configured, else OpenAI (OPENAI_API_KEY), else Ollama (OLLAMA_MODEL), else mock.
 
 Every call is recorded in ``LLMClient.telemetry`` (agent, mode, latency, tokens)
 for the observability panel in the apps.
@@ -40,6 +41,18 @@ INJECTION_MARKERS = [
     "system prompt",
     "approve this loan regardless",
 ]
+
+
+def parse_json(text: str) -> dict[str, Any]:
+    """Parse a model's JSON reply, tolerating ```json fences or prose around the object."""
+    text = (text or "").strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        start, end = text.find("{"), text.rfind("}")
+        if start == -1 or end <= start:
+            raise
+        return json.loads(text[start:end + 1])
 
 
 def mask_pii(text: str) -> str:
@@ -79,9 +92,12 @@ class LLMClient:
         self.api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
         has_azure = bool(self.endpoint and self.api_key and "<" not in self.endpoint)
         has_openai = bool(os.getenv("OPENAI_API_KEY"))
+        has_ollama = bool(os.getenv("OLLAMA_MODEL"))
         if self.mode == "auto":
-            self.mode = "azure" if has_azure else "openai" if has_openai else "mock"
-        if (self.mode == "azure" and not has_azure) or (self.mode == "openai" and not has_openai):
+            self.mode = ("azure" if has_azure else "openai" if has_openai
+                         else "ollama" if has_ollama else "mock")
+        if ((self.mode == "azure" and not has_azure) or (self.mode == "openai" and not has_openai)
+                or (self.mode == "ollama" and not has_ollama)):
             self.mode = "mock"
         self._client = None
         if self.mode == "azure":
@@ -97,6 +113,14 @@ class LLMClient:
 
             self.deployment = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
             self._client = OpenAI()  # reads OPENAI_API_KEY from the environment
+        elif self.mode == "ollama":
+            from openai import OpenAI
+
+            # Ollama serves an OpenAI-compatible API; runs fully local, no key needed
+            self.deployment = os.environ["OLLAMA_MODEL"]
+            self._client = OpenAI(base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
+                                  api_key="ollama", timeout=float(os.getenv("OLLAMA_TIMEOUT", "180")),
+                                  max_retries=0)
 
     @property
     def model_name(self) -> str:
@@ -118,6 +142,10 @@ class LLMClient:
             result = fallback()
             self._record(agent, start, len(system + user) // 4, len(json.dumps(result)) // 4, True)
             return result
+        extra = {}
+        if self.mode == "ollama" and os.getenv("OLLAMA_REASONING", "none") != "default":
+            # thinking models (gemma4, qwen3...) are ~3x faster with reasoning off for extraction
+            extra["reasoning_effort"] = os.getenv("OLLAMA_REASONING", "none")
         try:
             resp = self._client.chat.completions.create(
                 model=self.deployment,
@@ -127,10 +155,12 @@ class LLMClient:
                     {"role": "system", "content": system + "\nRespond with a single JSON object."},
                     {"role": "user", "content": user},
                 ],
+                **extra,
             )
-            result = json.loads(resp.choices[0].message.content or "{}")
+            result = parse_json(resp.choices[0].message.content or "{}")
             usage = resp.usage
-            self._record(agent, start, usage.prompt_tokens, usage.completion_tokens, True)
+            self._record(agent, start, getattr(usage, "prompt_tokens", 0) or 0,
+                         getattr(usage, "completion_tokens", 0) or 0, True)
             return result
         except Exception as exc:  # provider/network/parse failure -> safe fallback
             result = fallback()
