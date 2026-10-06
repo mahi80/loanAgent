@@ -10,6 +10,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from agents import DOCS, disbursement, portfolio  # noqa: E402
 from agents.approval import AUTHORITY_LEVELS, DECISIONS  # noqa: E402
