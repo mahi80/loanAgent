@@ -1,9 +1,9 @@
 """Provider-agnostic LLM client.
 
-* ``azure`` mode calls Azure OpenAI (chat completions, JSON mode).
+* ``azure`` mode calls Azure OpenAI; ``openai`` mode calls the OpenAI API (both chat completions, JSON mode).
 * ``mock`` mode returns a deterministic fallback supplied by the calling agent,
   so demos run offline and are reproducible.
-* ``auto`` (default) uses Azure when credentials are present, otherwise mock.
+* ``auto`` (default) uses Azure if configured, else OpenAI if OPENAI_API_KEY is set, else mock.
 
 Every call is recorded in ``LLMClient.telemetry`` (agent, mode, latency, tokens)
 for the observability panel in the apps.
@@ -77,10 +77,11 @@ class LLMClient:
         self.api_key = os.getenv("AZURE_OPENAI_API_KEY", "")
         self.deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
         self.api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
-        has_creds = bool(self.endpoint and self.api_key and "<" not in self.endpoint)
+        has_azure = bool(self.endpoint and self.api_key and "<" not in self.endpoint)
+        has_openai = bool(os.getenv("OPENAI_API_KEY"))
         if self.mode == "auto":
-            self.mode = "azure" if has_creds else "mock"
-        if self.mode == "azure" and not has_creds:
+            self.mode = "azure" if has_azure else "openai" if has_openai else "mock"
+        if (self.mode == "azure" and not has_azure) or (self.mode == "openai" and not has_openai):
             self.mode = "mock"
         self._client = None
         if self.mode == "azure":
@@ -91,10 +92,15 @@ class LLMClient:
                 api_key=self.api_key,
                 api_version=self.api_version,
             )
+        elif self.mode == "openai":
+            from openai import OpenAI
+
+            self.deployment = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+            self._client = OpenAI()  # reads OPENAI_API_KEY from the environment
 
     @property
     def model_name(self) -> str:
-        return f"azure:{self.deployment}" if self.mode == "azure" else "mock-deterministic-v1"
+        return f"{self.mode}:{self.deployment}" if self._client else "mock-deterministic-v1"
 
     def complete_json(
         self,
@@ -108,7 +114,7 @@ class LLMClient:
         mode or on any provider error (the failure is recorded, never hidden)."""
         start = time.perf_counter()
         user = mask_pii(user)
-        if self.mode != "azure":
+        if self._client is None:
             result = fallback()
             self._record(agent, start, len(system + user) // 4, len(json.dumps(result)) // 4, True)
             return result

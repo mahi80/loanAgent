@@ -25,7 +25,7 @@ streamlit run a1_loan_lifecycle/app.py
 streamlit run a2_chem_demand/app.py
 ```
 
-**LLM.** Copy `.env.example` to `.env` and set `AZURE_OPENAI_*` to use Azure OpenAI. Without credentials, the agents run in **deterministic mock mode**, so every demo works offline and gives the same result each time. `LLM_MODE=auto|azure|mock`.
+**LLM.** Copy `.env.example` to `.env` and set either `AZURE_OPENAI_*` (Azure OpenAI) or `OPENAI_API_KEY` (OpenAI API). Without credentials, the agents run in **deterministic mock mode**, so every demo works offline and gives the same result each time. `LLM_MODE=auto|azure|openai|mock`. `.env` is git-ignored.
 
 **Rebuild the diagrams and decks:**
 
