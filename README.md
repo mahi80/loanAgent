@@ -38,7 +38,7 @@ docker compose up --build -d
 - A1 loan lifecycle: http://localhost:8501
 - A2 demand response: http://localhost:8502
 
-`.env` is optional and is picked up automatically. Audit logs and the mock SAP outbox are kept in the `runtime` volume. To stop the services:
+`.env` is optional and is picked up automatically. Audit logs and the mock SAP outbox are kept in the `runtime` volume. Library versions are pinned in `requirements.txt`. The forecasting model can still differ by under 1% between Linux (Docker) and Windows, because floating-point maths differs: for example, a 749 t gap vs 752 t and plan cost $72,120 vs $73,240. The decks were built on Windows. To stop the services:
 
 ```bash
 docker compose down
