@@ -11,7 +11,51 @@ This repo holds two client scenarios. Each comes with a working prototype, a dec
 | Value stream map | [deliverables/img/a1_vsm_block.png](deliverables/img/a1_vsm_block.png) | [deliverables/img/a2_vsm_block.png](deliverables/img/a2_vsm_block.png) |
 | Details | [a1_loan_lifecycle/README.md](a1_loan_lifecycle/README.md) | [a2_chem_demand/README.md](a2_chem_demand/README.md) |
 
-## Quick start
+## Quick start: Docker (recommended)
+
+You need Docker Desktop (Windows / macOS) or Docker Engine + Compose v2 (Linux). See **[docs/DOCKER.md](docs/DOCKER.md)** for the full install guide, LLM options, Ollama setup and troubleshooting.
+
+```bash
+git clone https://github.com/mahi80/loanAgent.git
+```
+
+```bash
+cd loanAgent
+```
+
+```bash
+docker compose up --build -d
+```
+
+- A1 Agentic Loan Lifecycle: http://localhost:8501
+- A2 Demand Sensing + Agentic Response: http://localhost:8502
+
+That's all you need for an offline demo in **mock mode**. To use a real LLM, copy `.env.example` to `.env`, pick a mode (see below), and recreate the containers:
+
+```bash
+docker compose up -d --force-recreate
+```
+
+To stop the services:
+
+```bash
+docker compose down
+```
+
+### LLM modes (`.env`)
+
+| Mode | Settings | Notes |
+|---|---|---|
+| Mock (default) | none, or `LLM_MODE=mock` | Offline, same result every run |
+| Ollama (local) | `LLM_MODE=ollama`, `OLLAMA_MODEL=gemma4:e4b` | Free; data stays on the machine; see [Ollama notes](docs/DOCKER.md#ollama-notes) |
+| OpenAI | `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini` | |
+| Azure OpenAI | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT` | |
+
+`LLM_MODE=auto` picks Azure, then OpenAI, then Ollama, then mock. `.env` is git-ignored and never copied into the image. If an LLM call fails, it falls back to deterministic output and the failure is logged in the Audit & observability tab.
+
+## Alternative: run with local Python
+
+You need Python 3.12.
 
 ```bash
 pip install -r requirements.txt
@@ -25,35 +69,14 @@ streamlit run a1_loan_lifecycle/app.py
 streamlit run a2_chem_demand/app.py
 ```
 
-**LLM.** Copy `.env.example` to `.env` and set either `AZURE_OPENAI_*` (Azure OpenAI) or `OPENAI_API_KEY` (OpenAI API). Without credentials, the agents run in **deterministic mock mode**, so every demo works offline and gives the same result each time. `LLM_MODE=auto|azure|openai|mock`. `.env` is git-ignored.
+When running locally, Ollama is reached at `http://localhost:11434/v1`.
 
-### Local LLM with Ollama (no API key)
+## Tests and utilities
 
-Set `LLM_MODE=ollama` and `OLLAMA_MODEL=gemma4:e4b` in `.env`. Docker reaches the host's Ollama through `host.docker.internal`. On an RTX 4080 Laptop GPU (12 GB), gemma4:e4b runs fully on the GPU at about 3–4 s per agent call, and each loan case takes 20–30 s end to end.
-
-Reasoning is switched off for speed (`OLLAMA_REASONING=none`). Fenced or mis-nested JSON is tolerated. Any field the model misses is filled by the rule-based parser and flagged `llm_missed`.
-
-If Ollama runs inside WSL, it is only reachable from Windows and Docker when nothing else listens on port 11434 on Windows. Quit the Windows Ollama app, then restart the WSL service so WSL forwards the port:
+**Retrieval eval** for the policy assistant (13/13 expected):
 
 ```bash
-wsl -d Ubuntu -u root -- systemctl restart ollama
-```
-
-### Run in Docker
-
-Both prototypes run from one image with two services:
-
-```bash
-docker compose up --build -d
-```
-
-- A1 loan lifecycle: http://localhost:8501
-- A2 demand response: http://localhost:8502
-
-`.env` is optional and is picked up automatically. Audit logs and the mock SAP outbox are kept in the `runtime` volume. Library versions are pinned in `requirements.txt`. The forecasting model can still differ by under 1% between Linux (Docker) and Windows, because floating-point maths differs: for example, a 749 t gap vs 752 t and plan cost $72,120 vs $73,240. The decks were built on Windows. To stop the services:
-
-```bash
-docker compose down
+python a1_loan_lifecycle/knowledge/eval_retriever.py
 ```
 
 **Rebuild the diagrams and decks:**
@@ -83,10 +106,12 @@ python a2_chem_demand/data/generate_synthetic.py
 ## Repository layout
 
 ```
-shared/            llm_client (Azure OpenAI + mock, PII mask, injection guard), audit chain, VSM engine + Streamlit view
-a1_loan_lifecycle/ agents/, orchestrator.py, knowledge/ (policy + RAG), data/ (synthetic applications, docs, portfolio, VSM)
+shared/            llm_client (Azure / OpenAI / Ollama + mock, PII mask, injection guard), audit chain, VSM engine + view
+docs/DOCKER.md     Docker install & run guide
+a1_loan_lifecycle/ agents/, orchestrator.py, knowledge/ (policy, hybrid RAG, assistant, eval), data/ (synthetic applications, docs, portfolio, VSM)
 a2_chem_demand/    agents/, orchestrator.py, forecasting.py, data/ (generator, SAP-like CSVs, opportunities, VSM)
 deliverables/      diagrams.py, build_decks.py, img/, *.pptx
+Dockerfile, docker-compose.yml, .env.example
 ```
 
 ## Assumptions & synthetic data

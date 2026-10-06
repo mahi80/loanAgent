@@ -11,6 +11,8 @@ x-app: &app
       required: false
   environment: &env
     OLLAMA_BASE_URL: http://host.docker.internal:11434/v1   # Ollama on the host / WSL
+  extra_hosts:
+    - "host.docker.internal:host-gateway"   # makes host.docker.internal work on Linux too
   volumes:
     - runtime:/app/runtime   # audit logs + mock SAP outbox survive restarts
   restart: unless-stopped
