@@ -1,0 +1,51 @@
+# Optional add-on: run Ollama INSIDE Docker and pull the model automatically.
+#
+#   CPU only:     docker compose -f docker-compose.yml -f docker-compose.ollama.yml up --build -d
+#   NVIDIA GPU:   docker compose -f docker-compose.yml -f docker-compose.ollama.yml -f docker-compose.ollama.gpu.yml up --build -d
+#
+# Model: OLLAMA_MODEL in .env (default gemma4:e4b, ~10 GB download on first start).
+# Models are stored in the `ollama` volume, so the pull happens only once.
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "11435:11434"            # host port 11435 avoids clashing with a host Ollama on 11434
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m     # keep the model in memory between demo calls
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  ollama-pull:                   # one-shot job: pulls the model, then exits
+    image: ollama/ollama:latest
+    container_name: ollama-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:e4b}
+    entrypoint: ["/bin/sh", "-c", "echo \"pulling $$OLLAMA_MODEL ...\" && ollama pull \"$$OLLAMA_MODEL\" && echo done"]
+    restart: "no"
+
+  loan-lifecycle:
+    environment: &ollama_env
+      LLM_MODE: ollama
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:e4b}
+      OLLAMA_BASE_URL: http://ollama:11434/v1
+    depends_on: &wait_for_model
+      ollama-pull:
+        condition: service_completed_successfully
+
+  demand-response:
+    environment: *ollama_env
+    depends_on: *wait_for_model
+
+volumes:
+  ollama:

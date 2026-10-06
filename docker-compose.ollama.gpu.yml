@@ -1,0 +1,12 @@
+# Optional: give the Ollama container the NVIDIA GPU.
+# Needs an NVIDIA driver on the host plus Docker Desktop (WSL2 backend) or the NVIDIA Container Toolkit on Linux.
+# Use together with docker-compose.ollama.yml (see the header there).
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

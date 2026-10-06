@@ -40,7 +40,8 @@ On Windows PowerShell, use `copy .env.example .env`. Then edit `.env` and pick *
 | Mode | Put in `.env` | When to use |
 |---|---|---|
 | **Mock** (default) | `LLM_MODE=mock` (or no `.env` at all) | Offline demos. The answers are fixed, so every run gives the same result. |
-| **Ollama** (local, free, no data leaves the machine) | `LLM_MODE=ollama`<br>`OLLAMA_MODEL=gemma4:e4b` | You run Ollama on the host. See [Ollama notes](#ollama-notes). |
+| **Ollama in Docker** (local, free, nothing to install) | `OLLAMA_MODEL=gemma4:e4b` (optional) and start with the add-on Compose file | See [Ollama inside Docker](#ollama-inside-docker-no-host-install) |
+| **Ollama on the host** | `LLM_MODE=ollama`<br>`OLLAMA_MODEL=gemma4:e4b` | You already run Ollama on the host. See [Ollama on the host](#ollama-on-the-host-alternative). |
 | **OpenAI** | `OPENAI_API_KEY=sk-...`<br>`OPENAI_MODEL=gpt-4o-mini` | You have an OpenAI key |
 | **Azure OpenAI** | `AZURE_OPENAI_ENDPOINT=...`<br>`AZURE_OPENAI_API_KEY=...`<br>`AZURE_OPENAI_DEPLOYMENT=gpt-4o` | Enterprise / client tenant |
 
@@ -116,9 +117,51 @@ git pull
 docker compose up --build -d
 ```
 
-## Ollama notes
+## Ollama inside Docker (no host install)
 
-The containers reach Ollama on the host through `http://host.docker.internal:11434/v1`. That address is set in `docker-compose.yml`, with a `host-gateway` mapping so it also works on Linux.
+This option needs nothing installed on the host apart from Docker. An add-on Compose file starts an **Ollama container**, **pulls the model automatically**, and points both apps at it. Models are kept in the `ollama` volume, so the download happens only once.
+
+**NVIDIA GPU** (recommended; needs an NVIDIA driver, plus Docker Desktop with the WSL2 backend or the NVIDIA Container Toolkit on Linux):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ollama.yml -f docker-compose.ollama.gpu.yml up --build -d
+```
+
+**CPU only.** This works anywhere, but each call is much slower (about 30–90 s with `gemma4:e4b`; try `OLLAMA_MODEL=gemma4:e2b`):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ollama.yml up --build -d
+```
+
+What happens on start:
+
+1. `ollama` starts and becomes healthy.
+2. `ollama-pull` runs `ollama pull $OLLAMA_MODEL` (default `gemma4:e4b`, about 10 GB on first run) and exits.
+3. The two apps start only after the pull succeeds, with `LLM_MODE=ollama` and `OLLAMA_BASE_URL=http://ollama:11434/v1`.
+
+Follow the download progress:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ollama.yml logs -f ollama-pull
+```
+
+To choose another model, set `OLLAMA_MODEL=...` in `.env` and run the same `up` command again. Other commands:
+
+| Task | Command |
+|---|---|
+| Models in the container | `docker exec ollama ollama list` |
+| Is it using the GPU? | `docker exec ollama ollama ps` (look for `100% GPU`) |
+| Pull another model by hand | `docker exec ollama ollama pull mistral` |
+| Stop everything | `docker compose -f docker-compose.yml -f docker-compose.ollama.yml down` |
+| Delete downloaded models | `docker volume rm loanagent_ollama` (the prefix is your folder name, so check `docker volume ls`) |
+
+The container's API is also published on **http://localhost:11435** (not 11434), so it doesn't clash with an Ollama already installed on the host.
+
+> **Tip:** to save typing, put `COMPOSE_FILE=docker-compose.yml:docker-compose.ollama.yml:docker-compose.ollama.gpu.yml` in `.env`. On Windows, use `;` instead of `:`. After that, plain `docker compose up --build -d` includes Ollama.
+
+## Ollama on the host (alternative)
+
+If Ollama is already installed on the host, the default `docker-compose.yml` (without the add-on files) uses it. The containers reach Ollama on the host through `http://host.docker.internal:11434/v1`. That address is set in `docker-compose.yml`, with a `host-gateway` mapping so it also works on Linux.
 
 1. Pull a model on the host. `gemma4:e4b` is a good default for a 12 GB GPU. Smaller GPUs can try `gemma4:e2b`, and larger ones `gemma4:26b`.
 
@@ -171,6 +214,8 @@ docker exec a1-loan-lifecycle python -c "import urllib.request; print(urllib.req
 | Docker Desktop shows *"An unexpected error occurred … dockerInference … The file cannot be accessed by the system"* (or the same for `docker-secrets-engine\engine.sock`) | A stale socket file from an earlier Docker version. Quit Docker Desktop, rename `%LOCALAPPDATA%\Docker\run` to `run.old` (and likewise `%LOCALAPPDATA%\docker-secrets-engine`), then start Docker Desktop again. It recreates the folders. Don't use *Reset to factory defaults*: it isn't needed, and it wipes your images and settings. |
 | `Bind for 0.0.0.0:8501 failed: port is already allocated` | Another app (often a local `streamlit run`) uses the port. Stop it, or change the left-hand port in `docker-compose.yml`, e.g. `"9501:8501"`. |
 | Sidebar shows `mock-deterministic-v1` although `.env` is set | The container was created before `.env` changed (run `docker compose up -d --force-recreate`), or the image is out of date after a code change (run `docker compose up --build -d`). |
+| `could not select device driver "nvidia"` when using the GPU file | No NVIDIA GPU or driver is visible to Docker. Update the NVIDIA driver, or drop `-f docker-compose.ollama.gpu.yml` to run on CPU. |
+| Apps don't start with the Ollama add-on | They wait for `ollama-pull`. Check `docker compose ... logs ollama-pull` for a typo in the model name or a network error. |
 | Ollama mode is slow (more than 20 s per call) | The model is split between CPU and GPU, or another model holds VRAM. Check `ollama ps`, unload other models, and use a smaller model. |
 | The Ollama model returns empty or odd fields | Small models (around 7B) often mis-format JSON. The app tolerates this and fills gaps with the rule-based parser (flagged `llm_missed` in the Document Intelligence table). For better quality, use `gemma4:e4b` or larger. |
 | Container is `unhealthy` | `docker compose logs <service>`. Usually a Python import error after editing code; rebuild with `--build`. |

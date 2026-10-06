@@ -42,12 +42,29 @@ To stop the services:
 docker compose down
 ```
 
+### Run with a local LLM in Docker (Ollama container + automatic model pull)
+
+With an NVIDIA GPU:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ollama.yml -f docker-compose.ollama.gpu.yml up --build -d
+```
+
+CPU only (slower):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ollama.yml up --build -d
+```
+
+The first start downloads `gemma4:e4b` (about 10 GB) into the `ollama` volume, and the apps start once the pull finishes. Details: [docs/DOCKER.md](docs/DOCKER.md#ollama-inside-docker-no-host-install).
+
 ### LLM modes (`.env`)
 
 | Mode | Settings | Notes |
 |---|---|---|
 | Mock (default) | none, or `LLM_MODE=mock` | Offline, same result every run |
-| Ollama (local) | `LLM_MODE=ollama`, `OLLAMA_MODEL=gemma4:e4b` | Free; data stays on the machine; see [Ollama notes](docs/DOCKER.md#ollama-notes) |
+| Ollama **in Docker** | start with the add-on file (below); optional `OLLAMA_MODEL` | Nothing to install; the model is pulled automatically |
+| Ollama on the host | `LLM_MODE=ollama`, `OLLAMA_MODEL=gemma4:e4b` | Uses an existing host install; see [host notes](docs/DOCKER.md#ollama-on-the-host-alternative) |
 | OpenAI | `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini` | |
 | Azure OpenAI | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT` | |
 
@@ -111,7 +128,7 @@ docs/DOCKER.md     Docker install & run guide
 a1_loan_lifecycle/ agents/, orchestrator.py, knowledge/ (policy, hybrid RAG, assistant, eval), data/ (synthetic applications, docs, portfolio, VSM)
 a2_chem_demand/    agents/, orchestrator.py, forecasting.py, data/ (generator, SAP-like CSVs, opportunities, VSM)
 deliverables/      diagrams.py, build_decks.py, img/, *.pptx
-Dockerfile, docker-compose.yml, .env.example
+Dockerfile, docker-compose.yml (+ .ollama.yml / .ollama.gpu.yml add-ons), .env.example
 ```
 
 ## Assumptions & synthetic data
