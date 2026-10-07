@@ -179,6 +179,16 @@ def appendix_deployment(d: "Deck", asg: str) -> None:
         d.image(s, IMG / f"{asg}_deploy_{cloud}.png", 0.3, 1.2, 12.7, 5.8)
         d.notes(s, f"Target {label} deployment. Client-cloud agnostic: the same container images, agent graph and "
                    "MCP tool contracts deploy to either cloud; only managed services differ.")
+    # reference platform architectures, included exactly as provided
+    for letter, cloud, label in (("D", "aws", "AWS"), ("E", "azure", "Azure")):
+        s = d.slide(f"Appendix {letter} · Reference platform: {label} agentic AI with MCP",
+                    "Appendix · reference architecture")
+        d.image(s, IMG / f"ref_{cloud}_agentic_platform.png", 0.3, 1.2, 12.7, 5.8)
+        d.notes(s, f"Enterprise reference architecture for an agentic AI platform on {label}: users, identity, network, "
+                   "edge, auth, application layer (FastAPI, LangGraph agents, MCP server), data access (PostgreSQL + "
+                   "secrets), enterprise systems via MCP tools, ingestion/RAG, semantic layer, LLM governance, "
+                   "human-in-the-loop, MLOps, observability and cross-cutting services. Our agents slot into the "
+                   "LangGraph and MCP containers.")
 
 
 # ===================================================================== A1
