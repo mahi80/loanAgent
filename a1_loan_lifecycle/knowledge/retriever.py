@@ -14,6 +14,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 POLICY_PATH = Path(__file__).with_name("credit_policy.md")
+ADDENDA_DIR = Path(__file__).resolve().parents[2] / "runtime" / "policy"  # uploaded policy addenda
 
 # domain abbreviations / colloquial terms -> policy vocabulary
 SYNONYMS = {
@@ -46,8 +47,11 @@ def expand(query: str) -> str:
 
 
 class PolicyRetriever:
-    def __init__(self, path: Path = POLICY_PATH):
+    def __init__(self, path: Path = POLICY_PATH, include_addenda: bool = True):
         text = path.read_text(encoding="utf-8")
+        if include_addenda and ADDENDA_DIR.exists():
+            for extra in sorted(ADDENDA_DIR.glob("*.md")):
+                text += "\n\n" + extra.read_text(encoding="utf-8")
         self.clauses: dict[str, dict[str, str]] = {}
         for block in re.split(r"\n(?=## )", text):
             m = re.match(r"## (CP-[\d.]+) (.+?)\n(.+)", block.strip(), re.S)

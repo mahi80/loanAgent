@@ -160,12 +160,25 @@ class Deck:
 
     def save(self, path):
         self.p.save(path)
-        print("wrote", path.name, f"({self.n} slides)")
+        print("wrote", path.name, f"({min(self.n, 10)} main slides + {max(self.n - 10, 0)} appendix)")
 
 
 def ba_rows(csv, demand):
     df = vsm.before_after(vsm.load(csv), vsm.Assumptions(demand))
     return [list(df.columns)] + df.astype(str).values.tolist()
+
+
+def appendix_deployment(d: "Deck", asg: str) -> None:
+    """Appendix (beyond the 10-slide main story): POC deployment, then AWS and Azure production targets."""
+    s = d.slide("Appendix A · POC deployment today: Docker Compose with a local GPU LLM", "Appendix · deployment")
+    d.image(s, IMG / "poc_deployment.png", 0.3, 1.25, 12.7, 5.75)
+    d.notes(s, "What actually runs today. Same agents and code path as production; only the platform services change.")
+    for letter, cloud, label in (("B", "aws", "AWS"), ("C", "azure", "Azure")):
+        s = d.slide(f"Appendix {letter} · {label} production deployment: agents, MCP server, PostgreSQL",
+                    "Appendix · deployment")
+        d.image(s, IMG / f"{asg}_deploy_{cloud}.png", 0.3, 1.2, 12.7, 5.8)
+        d.notes(s, f"Target {label} deployment. Client-cloud agnostic: the same container images, agent graph and "
+                   "MCP tool contracts deploy to either cloud; only managed services differ.")
 
 
 # ===================================================================== A1
@@ -300,6 +313,7 @@ def deck_a1():
            "Demand 120 apps/month; 21 days × 7.5 h; 1 wait-day = 8 h; $60/h loaded analyst cost. LLM runs in deterministic mock "
            "mode unless Azure OpenAI credentials are set. Ratios, rules and grades are deterministic code.",
            0.5, 5.65, 12.3, 1.25, fill=LIGHT, head_color=GREY, size=10)
+    appendix_deployment(d, "a1")
     d.save(HERE / "A1_Loan_Lifecycle_Deck.pptx")
 
 
@@ -425,6 +439,7 @@ def deck_a2():
            "signals, DC inventory, plant capacity and lanes, with two injected events (APAC epoxy project ramp; EU PVC outage). "
            "VSM step times mocked; financial benefits are ranges for a ~$5B manufacturer. SAP/IBP calls are mocked payloads.",
            0.5, 5.65, 12.3, 1.25, fill=LIGHT, head_color=GREY, size=10)
+    appendix_deployment(d, "a2")
     d.save(HERE / "A2_Chemical_Demand_Deck.pptx")
 
 

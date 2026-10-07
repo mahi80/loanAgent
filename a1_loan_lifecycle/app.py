@@ -16,13 +16,19 @@ from agents import DOCS, disbursement, portfolio  # noqa: E402
 from agents.approval import AUTHORITY_LEVELS, DECISIONS  # noqa: E402
 from orchestrator import PIPELINE, LoanOrchestrator, list_applications  # noqa: E402
 from knowledge import assistant  # noqa: E402
-from shared import vsm_view  # noqa: E402
+from shared import auth, observability_view, vsm_view  # noqa: E402
+import ingestion  # noqa: E402
 
 st.set_page_config(page_title="Agentic Loan Lifecycle", page_icon="🏦", layout="wide")
 
 STATUS_ICON = {"PASS": "✅", "WARN": "⚠️", "FAIL": "❌", "MISSING": "📄"}
 REC_COLOR = {"APPROVE": "green", "APPROVE_WITH_CONDITIONS": "blue", "REQUEST_INFO": "orange",
              "REFER": "orange", "DECLINE": "red"}
+
+ROLES = ["Viewer", "Credit Analyst"] + [r for r, _ in AUTHORITY_LEVELS]  # lowest -> highest
+DEMO_USERS = [("a.mehta", "A. Mehta", "Credit Analyst"), ("r.iyer", "R. Iyer", "Credit Manager"),
+              ("j.smith", "J. Smith", "Senior Credit Officer"), ("c.kumar", "C. Kumar", "Credit Committee"),
+              ("b.board", "B. Board", "Board Credit Committee"), ("v.viewer", "Auditor (read-only)", "Viewer")]
 
 if "orch" not in st.session_state:
     st.session_state.orch = LoanOrchestrator()
@@ -34,20 +40,73 @@ apps = {a["application_id"]: a for a in list_applications()}
 # ------------------------------------------------------------------ sidebar
 with st.sidebar:
     st.title("🏦 Loan Lifecycle Agents")
-    st.caption(f"LLM mode: **{orch.llm.mode}** · model `{orch.llm.model_name}`")
+user = auth.sign_in(DEMO_USERS, ROLES)
+with st.sidebar:
+    st.caption(f"LLM mode: **{orch.llm.mode}** · model `{orch.llm.model_name}` · auth: {user.method}")
     app_id = st.selectbox("Loan application", list(apps),
                           format_func=lambda k: f"{k} · {apps[k]['borrower']} · ${apps[k]['amount_usd'] / 1e6:.1f}M")
-    if st.button("▶ Run agent pipeline", type="primary", use_container_width=True):
+    can_run = auth.has_role(user, ROLES, "Credit Analyst")
+    if st.button("▶ Run agent pipeline", type="primary", use_container_width=True, disabled=not can_run,
+                 help=None if can_run else "Requires the Credit Analyst role or higher"):
         with st.spinner("Agents working..."):
-            st.session_state.cases[app_id] = orch.run_until_gate(apps[app_id])
+            st.session_state.cases[app_id] = orch.run_until_gate(apps[app_id], actor=user.username)
     st.divider()
     st.caption("💬 Ask the credit policy in the **Policy assistant** tab.")
     st.divider()
     st.caption("All data is synthetic. AI outputs are decision support; credit decisions are taken by humans.")
 
-tab_vsm, tab_flow, tab_post, tab_port, tab_chat, tab_audit = st.tabs(
-    ["⓪ Value stream (why these agents)", "① Origination → Decision", "② Disbursement CPs",
+tab_vsm, tab_new, tab_flow, tab_post, tab_port, tab_chat, tab_audit = st.tabs(
+    ["⓪ Value stream (why these agents)", "📥 New application", "① Origination → Decision", "② Disbursement CPs",
      "③ Portfolio monitoring", "💬 Policy assistant (RAG)", "④ Audit & observability"])
+
+# ------------------------------------------------------------------ ingestion
+with tab_new:
+    st.caption("Ingestion (POC): upload documents → text extraction (txt / md / pdf) → classification → landing "
+               "folder → the same agent pipeline (prompt-injection screening, grounded extraction). Production: "
+               "S3 / Blob + Textract / Document Intelligence (OCR) + event triggers.")
+    if auth.require(user, ROLES, "Credit Analyst", "Submitting an application"):
+        with st.form("new_app", clear_on_submit=False):
+            c1, c2, c3 = st.columns(3)
+            borrower = c1.text_input("Borrower", "Northwind Packaging Ltd")
+            sector = c2.text_input("Sector", "Packaging")
+            product = c3.selectbox("Product", ["term_loan", "working_capital", "project_finance"])
+            c4, c5, c6 = st.columns(3)
+            amount = c4.number_input("Amount (USD)", 100_000, 100_000_000, 3_000_000, 100_000)
+            tenor = c5.number_input("Tenor (years)", 1, 20, 5)
+            rate = c6.number_input("Interest rate", 0.01, 0.30, 0.10, 0.005, format="%.3f")
+            purpose = st.text_input("Purpose", "Capacity expansion")
+            files = st.file_uploader("Supporting documents (financial statements, KYC, bank statement, valuation...)",
+                                     type=["txt", "md", "pdf"], accept_multiple_files=True)
+            submitted = st.form_submit_button("Ingest application", type="primary")
+        if submitted:
+            try:
+                new_app = ingestion.create_application(
+                    {"borrower": borrower, "sector": sector, "product": product, "amount_usd": amount,
+                     "tenor_years": tenor, "interest_rate": rate, "purpose": purpose,
+                     "relationship_manager": user.name}, [(f.name, f.getvalue()) for f in files or []], user.username)
+                orch.audit.record(new_app["application_id"], user.username, "application.ingested",
+                                  {"documents": new_app["ingestion_report"]})
+                st.success(f"Ingested **{new_app['application_id']}** - select it in the sidebar and run the pipeline.")
+                st.dataframe(pd.DataFrame(new_app["ingestion_report"]), hide_index=True, use_container_width=True)
+            except ValueError as e:
+                st.error(str(e))
+        st.caption("Tip: try the sample documents in `a1_loan_lifecycle/data/documents/` - classification uses "
+                   "filename and content keywords.")
+    st.divider()
+    st.subheader("Policy corpus (RAG) - add an addendum and re-index")
+    st.write(f"Indexed clauses: **{len(orch.retriever.clauses)}**")
+    if auth.require(user, ROLES, "Credit Manager", "Updating the credit policy corpus"):
+        pol = st.file_uploader("Policy addendum (.md with '## CP-x.y Title' clauses)", type=["md", "txt"], key="pol")
+        if pol and st.button("Ingest & re-index policy"):
+            try:
+                ids = ingestion.ingest_policy(pol.name, pol.getvalue())
+                from knowledge.retriever import PolicyRetriever
+
+                orch.retriever = PolicyRetriever()
+                orch.audit.record("POLICY", user.username, "policy.reindexed", {"file": pol.name, "clauses": ids})
+                st.success(f"Indexed {len(ids)} clause(s): {', '.join(ids)}. Total now {len(orch.retriever.clauses)}.")
+            except ValueError as e:
+                st.error(str(e))
 
 # ------------------------------------------------------------------ policy assistant
 with tab_chat:
@@ -82,7 +141,7 @@ with tab_chat:
             res = assistant.answer(question, orch.retriever, orch.llm,
                                    history=[{"role": m["role"], "content": m["content"]} for m in chat[:-1]])
         chat.append({"role": "assistant", "content": res["answer"], "meta": res})
-        orch.audit.record("POLICY-QA", assistant.NAME, "qa.answered",
+        orch.audit.record("POLICY-QA", f"{user.username} via {assistant.NAME}", "qa.answered",
                           {"question": question[:200], "citations": res["citations"], "grounded": res["grounded"]},
                           model=orch.llm.model_name)
         st.rerun()
@@ -170,18 +229,18 @@ def render_flow() -> None:
 
     st.subheader("👤 Human decision gate")
     if "human" not in case:
-        with st.form("decision"):
-            f1, f2, f3 = st.columns(3)
-            approver = f1.text_input("Approver name", "J. Smith")
-            role = f2.selectbox("Approver role", [r for r, _ in AUTHORITY_LEVELS], index=1)
-            decision = f3.selectbox("Decision", DECISIONS, index=DECISIONS.index(ap["recommendation"]))
-            rationale = st.text_area("Rationale (mandatory if overriding the agent)")
-            if st.form_submit_button("Record decision", type="primary"):
-                try:
-                    orch.record_decision(case, decision, approver, role, rationale)
-                    st.rerun()
-                except (PermissionError, ValueError) as e:
-                    st.error(str(e))
+        st.caption(f"Deciding as **{user.label}** (from {user.method} sign-in; roles are not self-selectable). "
+                   f"Required authority: **{ap['required_authority']}**.")
+        if auth.require(user, ROLES, "Credit Manager", "Recording a credit decision"):
+            with st.form("decision"):
+                decision = st.selectbox("Decision", DECISIONS, index=DECISIONS.index(ap["recommendation"]))
+                rationale = st.text_area("Rationale (mandatory if overriding the agent)")
+                if st.form_submit_button("Record decision", type="primary"):
+                    try:
+                        orch.record_decision(case, decision, user.name, user.role, rationale)
+                        st.rerun()
+                    except (PermissionError, ValueError) as e:
+                        st.error(str(e))
     else:
         h = case["human"]
         (st.warning if h["override"] else st.success)(
@@ -238,3 +297,4 @@ with tab_audit:
     st.subheader("LLM telemetry")
     if orch.llm.telemetry:
         st.dataframe(pd.DataFrame([t.__dict__ for t in orch.llm.telemetry]), hide_index=True, use_container_width=True)
+    observability_view.render(("loan.",))

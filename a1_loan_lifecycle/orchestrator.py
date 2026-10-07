@@ -25,6 +25,7 @@ from agents import DATA, approval, doc_intel, due_diligence, intake, risk  # noq
 from knowledge.retriever import PolicyRetriever  # noqa: E402
 from shared.audit import AuditLog, inputs_hash  # noqa: E402
 from shared.llm_client import LLMClient  # noqa: E402
+from shared.observability import current_trace_id, span  # noqa: E402
 
 PIPELINE = [
     ("intake", intake.NAME),
@@ -36,7 +37,10 @@ PIPELINE = [
 
 
 def list_applications() -> list[dict[str, Any]]:
-    return [json.loads(p.read_text()) for p in sorted((DATA / "applications").glob("*.json"))]
+    from ingestion import list_uploaded
+
+    samples = [json.loads(p.read_text()) for p in sorted((DATA / "applications").glob("*.json"))]
+    return samples + list_uploaded()
 
 
 class LoanOrchestrator:
@@ -47,7 +51,8 @@ class LoanOrchestrator:
 
     def _step(self, case: dict, key: str, agent: str, fn, *args) -> Any:
         t0 = time.perf_counter()
-        out = fn(*args)
+        with span(f"agent.{key}", agent=agent, case=case["id"]):
+            out = fn(*args)
         ms = int((time.perf_counter() - t0) * 1000)
         case["trace"].append({"step": key, "agent": agent, "ms": ms})
         public = {k: v for k, v in out.items() if not k.startswith("_")} if isinstance(out, dict) else out
@@ -55,7 +60,14 @@ class LoanOrchestrator:
                           model=self.llm.model_name)
         return out
 
-    def run_until_gate(self, app: dict) -> dict[str, Any]:
+    def run_until_gate(self, app: dict, actor: str = "system") -> dict[str, Any]:
+        with span("loan.pipeline", case=app["application_id"], actor=actor, model=self.llm.model_name) as attrs:
+            case = self._run_until_gate(app)
+            case["trace_id"] = current_trace_id()
+            attrs["recommendation"] = case["approval"]["recommendation"]
+            return case
+
+    def _run_until_gate(self, app: dict) -> dict[str, Any]:
         case: dict[str, Any] = {
             "id": app["application_id"],
             "application": app,
@@ -82,6 +94,10 @@ class LoanOrchestrator:
         return case
 
     def record_decision(self, case: dict, decision: str, approver: str, role: str, rationale: str) -> dict:
+        with span("loan.decision", case=case["id"], approver=approver, role=role, decision=decision):
+            return self._record_decision(case, decision, approver, role, rationale)
+
+    def _record_decision(self, case: dict, decision: str, approver: str, role: str, rationale: str) -> dict:
         rec = case["approval"]["recommendation"]
         required = case["approval"]["required_authority"]
         if approval.authority_rank(role) < approval.authority_rank(required) and decision.startswith("APPROVE"):

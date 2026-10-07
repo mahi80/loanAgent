@@ -16,7 +16,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
 from orchestrator import ROLES, DemandResponseOrchestrator  # noqa: E402
-from shared import vsm_view  # noqa: E402
+from shared import auth, observability_view, vsm_view  # noqa: E402
 
 st.set_page_config(page_title="Demand Sensing + Agentic Response", page_icon="🧪", layout="wide")
 
@@ -35,9 +35,15 @@ if "orch" not in st.session_state:
 orch: DemandResponseOrchestrator = st.session_state.orch
 S = orch.sensing
 
+APP_ROLES = ["Viewer", *ROLES]  # lowest -> highest: Viewer, Demand Planner, S&OP Lead
+DEMO_USERS = [("p.planner", "P. Planner", "Demand Planner"), ("l.chen", "L. Chen", "S&OP Lead"),
+              ("v.viewer", "Finance (read-only)", "Viewer")]
+
 with st.sidebar:
     st.title("🧪 Demand → Action Agents")
-    st.caption(f"LLM mode: **{orch.llm.mode}** · `{orch.llm.model_name}`")
+user = auth.sign_in(DEMO_USERS, APP_ROLES)
+with st.sidebar:
+    st.caption(f"LLM mode: **{orch.llm.mode}** · `{orch.llm.model_name}` · auth: {user.method}")
     st.metric("Data as of", str(S.as_of.date()))
     st.metric("Open deviation alerts", len(orch.alerts))
     if st.button("↻ Re-run sensing", use_container_width=True):
@@ -123,8 +129,10 @@ with t_act:
     idx = st.selectbox("Investigate alert", range(len(al)),
                        format_func=lambda i: f"{al.sku[i]} · {al.region[i]} · {al.direction[i]} · ${al.margin_at_stake_usd[i]:,.0f}")
     key = f"{al.sku[idx]}-{al.region[idx]}"
-    if st.button("▶ Run response agents", type="primary"):
-        st.session_state.cases[key] = orch.analyse(idx)
+    can_run = auth.has_role(user, APP_ROLES, "Demand Planner")
+    if st.button("▶ Run response agents", type="primary", disabled=not can_run,
+                 help=None if can_run else "Requires the Demand Planner role or higher"):
+        st.session_state.cases[key] = orch.analyse(idx, actor=user.username)
     case = st.session_state.cases.get(key)
     if case:
         im, cons, rec = case["impact"], case["constraints"], case["recommendation"]
@@ -164,14 +172,14 @@ with t_act:
             edited = st.data_editor(plan_df[["include", "type", "action", "qty_t", "cost_usd", "benefit_usd", "lead_time_days"]],
                                     disabled=["type", "action", "cost_usd", "benefit_usd", "lead_time_days"],
                                     hide_index=True, use_container_width=True, key=f"ed-{key}")
-            with st.form(f"approve-{key}"):
-                f1, f2 = st.columns(2)
-                approver = f1.text_input("Approver", "L. Chen")
-                role = f2.selectbox("Role", ROLES, index=ROLES.index(rec["approval_level"]))
-                rationale = st.text_area("Rationale (required if editing or rejecting)")
-                b1, b2 = st.columns(2)
-                go_ = b1.form_submit_button("✅ Approve & trigger actions", type="primary")
-                no_ = b2.form_submit_button("✖ Reject")
+            st.caption(f"Approving as **{user.label}** (from {user.method} sign-in; roles are not self-selectable).")
+            go_ = no_ = False
+            if auth.require(user, APP_ROLES, "Demand Planner", "Approving or rejecting a plan"):
+                with st.form(f"approve-{key}"):
+                    rationale = st.text_area("Rationale (required if editing or rejecting)")
+                    b1, b2 = st.columns(2)
+                    go_ = b1.form_submit_button("✅ Approve & trigger actions", type="primary")
+                    no_ = b2.form_submit_button("✖ Reject")
             if go_ or no_:
                 actions = []
                 for orig, (_, row) in zip(rec["plan"], edited.iterrows()):
@@ -180,7 +188,7 @@ with t_act:
                         actions.append({**orig, "qty_t": int(row.qty_t), "cost_usd": round(orig["cost_usd"] * scale),
                                         "action": orig["action"] if scale == 1 else f"{orig['action']} [qty edited to {int(row.qty_t)} t]"})
                 try:
-                    orch.decide(case, approver, role, actions, rationale, reject=bool(no_))
+                    orch.decide(case, user.name, user.role, actions, rationale, reject=bool(no_))
                     st.rerun()
                 except (PermissionError, ValueError) as e:
                     st.error(md(str(e)))
@@ -203,3 +211,4 @@ with t_aud:
     st.subheader("LLM telemetry")
     if orch.llm.telemetry:
         st.dataframe(pd.DataFrame([t.__dict__ for t in orch.llm.telemetry]), hide_index=True, use_container_width=True)
+    observability_view.render(("demand.",))

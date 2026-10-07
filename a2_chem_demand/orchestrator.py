@@ -20,6 +20,7 @@ import forecasting  # noqa: E402
 from agents import constraints, deviation, executor, impact, recommender  # noqa: E402
 from shared.audit import AuditLog, inputs_hash  # noqa: E402
 from shared.llm_client import LLMClient  # noqa: E402
+from shared.observability import current_trace_id, span  # noqa: E402
 
 ROLES = ["Demand Planner", "S&OP Lead"]
 
@@ -32,6 +33,11 @@ class DemandResponseOrchestrator:
         self.alerts = None
 
     def sense(self) -> None:
+        with span("demand.sensing") as attrs:
+            self._sense()
+            attrs["alerts"] = len(self.alerts)
+
+    def _sense(self) -> None:
         t0 = time.perf_counter()
         self.sensing = forecasting.run()
         self.alerts = deviation.run(self.sensing.latest)
@@ -40,7 +46,15 @@ class DemandResponseOrchestrator:
             "wmape_plan": round(self.sensing.mape_plan, 4), "alerts": len(self.alerts),
             "ms": int((time.perf_counter() - t0) * 1000)}, model="HistGradientBoosting+runrate")
 
-    def analyse(self, idx: int) -> dict[str, Any]:
+    def analyse(self, idx: int, actor: str = "system") -> dict[str, Any]:
+        alert = self.alerts.iloc[idx]
+        with span("demand.response", case=f"DR-{alert['sku']}-{alert['region']}", actor=actor,
+                  model=self.llm.model_name):
+            case = self._analyse(idx)
+            case["trace_id"] = current_trace_id()
+            return case
+
+    def _analyse(self, idx: int) -> dict[str, Any]:
         alert = self.alerts.iloc[idx].to_dict()
         case_id = f"DR-{alert['sku']}-{alert['region']}"
         case: dict[str, Any] = {"id": case_id, "alert": alert, "trace": []}
@@ -50,7 +64,8 @@ class DemandResponseOrchestrator:
             ("recommendation", recommender.NAME, lambda: recommender.run(alert, case["impact"], case["constraints"], self.llm)),
         ):
             t0 = time.perf_counter()
-            case[key] = fn()
+            with span(f"agent.{key}", agent=name, case=case_id):
+                case[key] = fn()
             ms = int((time.perf_counter() - t0) * 1000)
             case["trace"].append({"agent": name, "ms": ms})
             self.audit.record(case_id, name, f"{key}.completed", {"ms": ms}, model=self.llm.model_name)
@@ -63,6 +78,11 @@ class DemandResponseOrchestrator:
 
     def decide(self, case: dict, approver: str, role: str, approved_actions: list[dict], rationale: str,
                reject: bool = False) -> dict:
+        with span("demand.decision", case=case["id"], approver=approver, role=role, reject=reject):
+            return self._decide(case, approver, role, approved_actions, rationale, reject)
+
+    def _decide(self, case: dict, approver: str, role: str, approved_actions: list[dict], rationale: str,
+                reject: bool = False) -> dict:
         rec = case["recommendation"]
         cost = sum(a["cost_usd"] for a in approved_actions)
         if not reject and cost > recommender.APPROVAL_THRESHOLD_USD and role != "S&OP Lead":

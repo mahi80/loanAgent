@@ -2,6 +2,7 @@
 segment, inventories documents and screens them for prompt injection."""
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from shared.llm_client import detect_injection
@@ -22,7 +23,7 @@ def segment(amount: float) -> str:
 def run(app: dict[str, Any]) -> dict[str, Any]:
     docs, security = {}, []
     for fname in app["documents"]:
-        path = DOCS / fname
+        path = Path(app.get("doc_dir", DOCS)) / fname  # uploaded applications land in their own folder
         if not path.exists():
             continue
         text = path.read_text(encoding="utf-8")

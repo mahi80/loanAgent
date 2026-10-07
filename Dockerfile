@@ -12,6 +12,7 @@ RUN pip install -r requirements.txt
 COPY shared/ shared/
 COPY a1_loan_lifecycle/ a1_loan_lifecycle/
 COPY a2_chem_demand/ a2_chem_demand/
+COPY evals/ evals/
 
 RUN useradd --create-home appuser && mkdir -p runtime && chown -R appuser /app
 USER appuser

@@ -1,0 +1,23 @@
+{
+  "min_field_accuracy": 0.85,
+  "max_case_seconds": 120,
+  "a1": [
+    {"app": "APP-1001", "expect": {"recommendation": "APPROVE", "authority": "Senior Credit Officer", "grade_max": 3}},
+    {"app": "APP-1002", "expect": {"recommendation": "REQUEST_INFO",
+                                   "missing_includes": ["Bank Statement", "Stock Statement", "Signed beneficial owner declaration"]}},
+    {"app": "APP-1003", "expect": {"recommendation": "DECLINE", "authority": "Board Credit Committee",
+                                   "fails_include": ["CP-4.1", "CP-4.2", "CP-4.3"], "security_flags_min": 1, "grade_min": 8}}
+  ],
+  "rag": [
+    {"q": "What is the LTV limit?", "cite": "CP-4.3", "contains": ["70%"]},
+    {"q": "Can we lend to a company whose director is a politician?", "cite": "CP-2.2", "contains": ["due diligence"]},
+    {"q": "Who approves a $15M loan with a policy exception?", "cite": "CP-6.1", "contains": ["Board Credit Committee"]},
+    {"q": "What is the minimum DSCR?", "cite": "CP-4.1", "contains": ["1.25"]},
+    {"q": "What is needed before disbursement?", "cite": "CP-7.1", "contains": ["facility agreement"]},
+    {"q": "What is the weather today?", "refuse": true}
+  ],
+  "a2": {
+    "top": {"sku": "EPX-200", "region": "APAC", "driver": "Pacific Coatings", "min_gap_t": 600, "approval": "S&OP Lead"},
+    "downside": {"sku": "PVC-K67", "region": "EU", "anomaly": "Iberia Polymers"}
+  }
+}

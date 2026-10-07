@@ -121,7 +121,7 @@ docker compose up --build -d
 
 This option needs nothing installed on the host apart from Docker. An add-on Compose file starts an **Ollama container**, **pulls the model automatically**, and points both apps at it. Models are kept in the `ollama` volume, so the download happens only once.
 
-**NVIDIA GPU** (recommended; needs an NVIDIA driver, plus Docker Desktop with the WSL2 backend or the NVIDIA Container Toolkit on Linux). Measured on an RTX 4080 Laptop: about 1.6 s per agent call, 7–14 s per loan case, 100% GPU:
+**NVIDIA GPU** (recommended; needs an NVIDIA driver, plus Docker Desktop with the WSL2 backend or the NVIDIA Container Toolkit on Linux). Measured on an RTX 4080 Laptop: about 1.6–6 s per agent call and 7–45 s per loan case, 100% GPU (varies with the laptop GPU power state):
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.ollama.yml -f docker-compose.ollama.gpu.yml up --build -d
@@ -206,6 +206,37 @@ docker exec a1-loan-lifecycle python -c "import urllib.request; print(urllib.req
 
 **Performance:** the model must fit in VRAM. With 12 GB, `gemma4:e4b` (about 10 GB) runs fully on the GPU at about 3–4 s per agent call. If `ollama ps` shows a CPU/GPU split, unload other models (`ollama stop <model>`) and retry.
 
+## Sign-in (AuthN / AuthZ)
+
+By default (`AUTH_MODE=demo`) the sidebar offers demo identities. Each has a fixed role, so approvers can't pick a higher authority (see the README table). To switch to real SSO:
+
+1. Register an app in Entra ID, Cognito or Okta. Add the redirect URIs `http://localhost:8501/oauth2callback` and `http://localhost:8502/oauth2callback`, and emit a `roles` (or groups) claim.
+2. Copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and fill in the client id, secret and metadata URL. This file is git-ignored.
+3. In `.env`, set `AUTH_MODE=oidc`, plus `AUTH_ROLE_MAP` if your claim values differ from the app role names, e.g. `{"credit-sco": "Senior Credit Officer"}`.
+4. Mount the secrets into the containers. Add this under the `x-app` → `volumes` key in `docker-compose.yml`:
+
+```
+      - ./.streamlit/secrets.toml:/app/.streamlit/secrets.toml:ro
+```
+
+5. Recreate the containers:
+
+```bash
+docker compose up -d --force-recreate
+```
+
+## Tracing and evals
+
+Traces are written to `runtime/traces.jsonl` (in the `runtime` volume) and shown under **Audit & observability → Traces**. To also export them to an OpenTelemetry backend (Langfuse, Jaeger, X-Ray via ADOT, Application Insights):
+- set `OTEL_EXPORTER_OTLP_ENDPOINT` (and `OTEL_SERVICE_NAME`) in `.env`;
+- add `opentelemetry-sdk opentelemetry-exporter-otlp` to `requirements.txt`, then rebuild.
+
+Run the agent eval harness inside the container (50 checks):
+
+```bash
+docker exec a1-loan-lifecycle python evals/run_evals.py
+```
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |
@@ -224,6 +255,6 @@ docker exec a1-loan-lifecycle python -c "import urllib.request; print(urllib.req
 ## What's in the image
 
 - `python:3.12-slim`, dependencies pinned in `requirements.txt`, runs as non-root `appuser`, with a Streamlit health check.
-- It contains `shared/`, `a1_loan_lifecycle/` and `a2_chem_demand/`. `.dockerignore` excludes `.env`, `.git`, decks and runtime data.
+- It contains `shared/`, `a1_loan_lifecycle/`, `a2_chem_demand/` and `evals/`. `.dockerignore` excludes `.env`, `.git`, decks and runtime data.
 - `APP` and `PORT` choose which app a container serves, so the same image is used for both services.
 - The named volume `runtime` (mounted at `/app/runtime`) keeps the hash-chained audit logs and the mock SAP outbox across restarts.

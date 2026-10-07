@@ -136,6 +136,16 @@ class LLMClient:
     ) -> dict[str, Any]:
         """Ask the model for a JSON object. Falls back to ``fallback()`` in mock
         mode or on any provider error (the failure is recorded, never hidden)."""
+        from shared.observability import span
+
+        with span("llm.call", agent=agent, model=self.model_name) as attrs:
+            result = self._complete_json(agent, system, user, fallback, temperature)
+            last = self.telemetry[-1]
+            attrs.update(prompt_tokens=last.prompt_tokens, completion_tokens=last.completion_tokens, ok=last.ok,
+                         fallback=bool(last.note))
+            return result
+
+    def _complete_json(self, agent, system, user, fallback, temperature) -> dict[str, Any]:
         start = time.perf_counter()
         user = mask_pii(user)
         if self._client is None:
