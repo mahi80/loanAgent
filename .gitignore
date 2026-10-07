@@ -5,3 +5,5 @@ __pycache__/
 runtime/
 *.log
 .streamlit/secrets.toml
+node_modules/
+deliverables/brief/data.json

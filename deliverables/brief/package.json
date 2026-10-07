@@ -1,0 +1,6 @@
+{
+  "name": "fde-brief",
+  "private": true,
+  "description": "Builds the CTO/CIO Word brief",
+  "dependencies": { "docx": "^9.0.0" }
+}
