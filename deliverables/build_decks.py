@@ -218,17 +218,29 @@ def deck_a1():
         "Control by design: |agents recommend, humans decide; authority matrix enforced in code; deterministic financial maths; prompt-injection and PII guards.",
         "Ask: |8-week POC in one segment (SME/mid-corporate), shadow mode on live files, MRM-ready evidence pack.",
     ], 0.5, 2.75, 12.3, 4.2, 15)
-    d.notes(s, "All figures use mocked step times (stated) and synthetic data. KPIs are computed by shared/vsm.py.")
+    d.notes(s, "TALK TRACK (30 sec) - Name the problem and the guarantee up front.\n"
+            "\"Our credit teams spend most of the loan lifecycle waiting, chasing documents and re-keying data. We looked at where agents remove that waste, "
+            "and built a working prototype that does it - with one guarantee: the AI recommends, people decide. Zero autonomous credit decisions.\"\n"
+            "Preview the ask (last bullet): an 8-week POC in one segment, in shadow mode.\n"
+            "All figures use mocked step times (stated) and synthetic data. KPIs are computed by shared/vsm.py.")
 
     s = d.slide("Credit teams spend most of the lifecycle waiting, chasing and re-keying", "Problem")
     d.image(s, IMG / "a1_lifecycle.png", 0.4, 1.35, 12.5, 3.6)
     d.card(s, "Manual effort", "Docs arrive by e-mail; data re-keyed into LOS and\nspreadsheets; memos written from scratch.", 0.5, 5.15, 4.0, 1.7)
     d.card(s, "Late risk visibility", "Policy checks on checklists; covenant breaches\nfound at quarterly test; adverse media ad hoc.", 4.65, 5.15, 4.0, 1.7)
     d.card(s, "Weak auditability", "Rationale spread across e-mail and memos;\nhard to evidence who decided what, on which data.", 8.8, 5.15, 4.0, 1.7)
+    d.notes(s, "TALK TRACK (1 min) - Three pains a CIO recognises.\n"
+            "\"Manual effort: documents arrive by e-mail, data is re-keyed, memos are written from scratch. "
+            "Late risk visibility: covenant breaches are found at the quarterly test. "
+            "Weak auditability: it is hard to evidence who decided what, on which data - and that is a regulatory exposure, not just an efficiency issue.\"")
 
     s = d.slide("Current process: value stream map shows 94% of elapsed time adds no value", "Current process · Lean VSM")
     d.image(s, IMG / "a1_vsm_block.png", 0.3, 1.25, 12.7, 5.75)
-    d.notes(s, "Takt = 157.5 h / 120 applications = 1.31 h. PCE = VA / lead time. Step times mocked - validate in POC week 1 via time-and-motion + LOS timestamps.")
+    d.notes(s, f"TALK TRACK (1 min) - Show the discipline before the answer.\n"
+            f"\"We mapped the process before choosing any AI. Origination to disbursement takes {cur['lead_time_d']:.1f} days and only {cur['pce']:.1%} of it adds value. "
+            f"{cur['steps_over_takt']:.0f} steps run slower than demand requires, and appraisal capacity is {cur['capacity_per_month']:.0f} files a month against demand of 120 - so the backlog grows.\"\n"
+            "Lead with these numbers; they matter more to a CIO than any model detail.\n"
+            "Takt = 157.5 h / 120 applications = 1.31 h. PCE = VA / lead time. Step times mocked - validate in POC week 1 via time-and-motion + LOS timestamps.")
 
     s = d.slide("Opportunity: five areas where agents remove the most waste", "Opportunity · Automation Priority Index")
     d.image(s, IMG / "a1_api.png", 0.3, 1.3, 6.2, 3.8)
@@ -240,6 +252,10 @@ def deck_a1():
         "Approval ranks low on purpose: |the decision stays human; agents only route and prepare the pack.",
         "Plus portfolio early-warning: |continuous covenant/EWS monitoring instead of quarterly tests.",
     ], 6.7, 4.25, 6.2, 2.6, 12)
+    d.notes(s, "TALK TRACK (1 min) - Agents go where the waste is, not everywhere.\n"
+            "\"We ranked every step by waste hours x feasibility x bottleneck. Document completeness and appraisal/memo come first. "
+            "Approval ranks low on purpose - the decision stays human; agents only prepare and route the pack. "
+            "We add continuous portfolio early warning instead of waiting for the quarterly covenant test.\"")
 
     s = d.slide("Agent ecosystem: seven specialist agents, one orchestrator, one human gate", "Proposed AI / agent solution")
     d.image(s, IMG / "a1_agent_flow.png", 0.3, 1.25, 12.7, 3.2)
@@ -252,9 +268,16 @@ def deck_a1():
                 ["Disbursement / CP", "Tracks conditions precedent; blocks release until evidenced", "Release funds"],
                 ["Portfolio Monitoring", "Quarterly covenant + EWS scan, Red/Amber notes", "Change limits or ratings"]],
             0.5, 4.5, 12.3, 2.45, 10, [1.6, 5.5, 3.2])
+    d.notes(s, "TALK TRACK - Point at the 'Never does' column; that is what builds trust.\n"
+            "\"Seven specialist agents, one orchestrator, one human gate. Each has one job and an explicit list of things it must never do: "
+            "the LLM never computes a ratio, never invents a value without evidence, never approves, never releases funds.\"")
 
     s = d.slide("Architecture: enterprise-ready, model-agnostic, auditable", "Architecture")
     d.image(s, IMG / "a1_architecture.png", 0.3, 1.2, 12.7, 5.8)
+    d.notes(s, "TALK TRACK (1 min) - Control, audit, data protection.\n"
+            "\"Identity decides who can approve what - the authority matrix is enforced in code. PII is masked before any model call, and documents are screened for prompt injection. "
+            "Every step goes to a hash-chained audit log that Model Risk and regulators can verify. It is model- and cloud-agnostic: Azure OpenAI, Bedrock or a self-hosted model. "
+            "AWS and Azure references are in the appendix.\"")
 
     s = d.slide("Demo: three applications, three different outcomes", "Working prototype · streamlit run a1_loan_lifecycle/app.py")
     rows = [["Case", "Facility", "Key agent findings", "Recommendation", "Routed to"]]
@@ -278,6 +301,12 @@ def deck_a1():
         "Controls you can try: |approving above your authority is blocked; overriding the agent without rationale is blocked; every step lands in a hash-chained audit log.",
         "LLM: |Azure OpenAI when credentials are set (.env), deterministic mock otherwise, so the demo always runs; PII masked before any model call.",
     ], 0.5, 4.85, 12.3, 2.1, 12)
+    d.notes(s, "TALK TRACK (2 min) - Show it working; switch to the live app if possible (http://localhost:8501).\n"
+            + " ".join(f"{c['id']} {c['application']['borrower']}: {c['approval']['recommendation'].replace('_', ' ').lower()} -> {c['approval']['required_authority']}."
+                       for c in cases) + "\n"
+            "\"Same agents, three different outcomes: a clean approval, an incomplete file where the agent drafts the information request, and a decline on policy breaches "
+            "where hidden prompt-injection text in a document was quarantined.\"\n"
+            "Demo tip: try approving the large case as a junior officer to show the authority block; then override without a rationale to show that is blocked too; finish on the Audit tab.")
 
     s = d.slide("Business impact: before vs after (assumptions stated)", "Business impact")
     d.table(s, ba_rows(csv, 120), 0.5, 1.35, 6.3, 3.4, 11, [3, 1, 1, 1.4])
@@ -292,6 +321,10 @@ def deck_a1():
         "Value (illustrative): |1,440 files/yr × 22.75 h saved × $60/h loaded ≈ $2.0M/yr capacity; plus earlier interest accrual from a 22-day faster lead time.",
         "Assumptions: |120 applications/month, 21 days × 7.5 h, step times mocked (to be baselined in POC week 1); synthetic borrower data; 1 day = 8 h wait.",
     ], 0.5, 5.0, 12.3, 1.9, 12)
+    d.notes(s, f"TALK TRACK - Lead time {cur['lead_time_d']:.1f} -> {fut['lead_time_d']:.1f} days; manual touch {cur['nva_h']:.1f} -> {fut['nva_h']:.2f} h per file; "
+            f"capacity {cur['capacity_per_month']:.0f} -> {fut['capacity_per_month']:.0f} files/month at the same headcount.\n"
+            "\"That is about $2M a year of analyst capacity, plus revenue from faster drawdown and every file checked against every policy rule instead of samples.\"\n"
+            "Present the value as illustrative; POC week 1 baselines it from LOS timestamps.")
 
     s = d.slide("POC: 8 weeks to prove value in shadow mode", "POC approach")
     d.table(s, [["Weeks", "Milestone", "Exit criteria"],
@@ -305,6 +338,10 @@ def deck_a1():
     d.card(s, "Data required", "200-500 historical files with decisions, credit policy,\nLOS extracts, KYC/sanctions samples, covenant data", 8.3, 3.05, 4.5, 1.55, size=11)
     d.card(s, "KPIs", "Field accuracy · missing-info recall · policy agreement ·\ntouch time · lead time · override rate · zero autonomous decisions", 0.5, 4.85, 6.1, 1.95, size=11)
     d.card(s, "Risks & mitigations", "Data access delays → masked extracts / synthetic\nHallucination → grounding check + deterministic maths\nMRM approval → early engagement, eval evidence\nAdoption → analyst co-design, override with reason", 6.75, 4.85, 6.05, 1.95, size=11, head_color=ORANGE)
+    d.notes(s, "TALK TRACK (30 sec) - End with a decision.\n"
+            "\"We are asking for an 8-week POC in one segment, in shadow mode next to analysts, producing the evidence pack Model Risk needs. "
+            "Success means at least 95% field accuracy, 95% agreement on policy checks, 40% less touch time - and zero autonomous credit decisions.\"\n"
+            "Requests: business sponsor + credit SME, access to 200-500 historical files and the policy corpus, an LOS sandbox, choice of LLM platform and identity provider.")
 
     s = d.slide("Production roadmap: from one segment to an enterprise agent platform", "Production roadmap")
     for i, (h, b) in enumerate([
@@ -323,6 +360,10 @@ def deck_a1():
            "Demand 120 apps/month; 21 days × 7.5 h; 1 wait-day = 8 h; $60/h loaded analyst cost. LLM runs in deterministic mock "
            "mode unless Azure OpenAI credentials are set. Ratios, rules and grades are deterministic code.",
            0.5, 5.65, 12.3, 1.25, fill=LIGHT, head_color=GREY, size=10)
+    d.notes(s, "TALK TRACK - One segment today, a reusable agent platform in 12-18 months (trade, retail credit, collections).\n"
+            "Each step reuses the same gateway, evaluation, audit and guardrail services, so each new use case costs less.\n"
+            "Expected questions: AI making credit decisions (no - authority enforced in code); hallucination (evidence + grounding + deterministic maths + 50-check eval harness); "
+            "auditability (hash-chained log); customer data (PII masking, in-region or self-hosted models).")
     appendix_deployment(d, "a1")
     d.save(HERE / "A1_Loan_Lifecycle_Deck.pptx")
 

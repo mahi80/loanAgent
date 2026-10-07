@@ -164,7 +164,26 @@ content.push(H2("1.4 Approach and method"),
 
 // ===================================================================== PART A
 const s1 = v1.steps;
+const c1 = caseById["APP-1001"], c2 = caseById["APP-1002"], c3 = caseById["APP-1003"];
 content.push(H1("2. Part A — Agentic Loan Lifecycle Management (financial institution)"),
+  H2("Part A at a glance — CIO talking points"),
+  P("A seven-minute narrative for presenting Part A to the CIO. Each message points to the section and slide that holds the evidence; step times are mocked and value figures are illustrative until baselined in the POC."),
+  Tbl(["#", "Message", "What to say", "Evidence"], [
+    ["1", "The problem", `"Our credit teams spend most of the loan lifecycle waiting, chasing documents and re-keying data. Decisions are slow, risk signals arrive late, and the rationale is scattered across e-mail."`, "§2.1 · slide 2"],
+    ["2", "How we chose", `"We mapped the process before choosing AI. Origination to disbursement takes **${v1.cur.lead_time_d} days** and only **${pct(v1.cur.pce, 1)}** adds value. Appraisal capacity is ${v1.cur.capacity_per_month} files a month against demand of 120, so the backlog grows."`, "§2.2 · slide 3"],
+    ["3", "Where agents go", `"We ranked every step by waste × feasibility × bottleneck. The top five — document completeness, appraisal and memo, conditions precedent, extraction, KYC/policy checks — plus portfolio early warning are where agents go. Approval ranks low on purpose: the decision stays human."`, "§2.3 · slide 4"],
+    ["4", "The solution", `"Seven specialist agents and one orchestrator, each with one job and an explicit 'never does'. Ratios, policy outcomes and grades are code; the LLM extracts, cites policy and drafts — it never sets a number or makes a decision."`, "§2.4–2.5 · slides 5–6"],
+    ["5", "Proof it works", `"Three applications, three outcomes: ${c1.borrower} → ${c1.rec.toLowerCase()} (${c1.authority}); ${c2.borrower} → ${c2.rec.toLowerCase()}, missing ${c2.missing.length} items with the request drafted; ${c3.borrower} → ${c3.rec.toLowerCase()} on ${c3.fails.length} policy breaches, with prompt-injection text quarantined, routed to the ${c3.authority}."`, "§2.6 · slide 7"],
+    ["6", "Impact", `"Lead time ${v1.cur.lead_time_d} → ${v1.fut.lead_time_d} days; manual touch ${v1.cur.nva_h} → ${v1.fut.nva_h} h per file; capacity ${v1.cur.capacity_per_month} → ${v1.fut.capacity_per_month} files a month with the same team — about **$2M/yr** of analyst capacity, plus revenue from faster drawdown."`, "§2.7 · slide 8"],
+    ["7", "The ask", `"An 8-week POC in one segment, in shadow mode next to analysts, producing the evidence pack Model Risk needs. Success = ≥95% field accuracy, ≥95% policy-check agreement, −40% touch time, zero autonomous credit decisions."`, "§2.8 · slide 9"],
+  ], [4, 14, 64, 18], { size: 17 }),
+  Caption("Table A0 — CIO talk track for Part A"),
+  Callout("Questions to expect", [
+    "**\"Will the AI make credit decisions?\"** — No. The authority matrix (CP-6.1) is enforced in code; approving above your authority or overriding without a rationale is blocked, and the approver's role comes from their identity.",
+    "**\"What about hallucination?\"** — Every extracted value carries verbatim evidence, is grounding-checked and cross-checked by a deterministic parser; ratios are computed in code; a 50-check evaluation harness gates releases.",
+    "**\"Can regulators and Model Risk audit it?\"** — Every step is written to a hash-chained audit log with inputs, model, version, citations and approver; tampering breaks the chain.",
+    "**\"Is customer data safe?\"** — PII is masked before any model call, documents are screened for prompt injection, data stays in our systems, and the model can run in-region or self-hosted.",
+  ], ORANGE),
   H2("2.1 Problem"),
   P("A global financial institution manages a long, multi-stakeholder loan lifecycle: origination, eligibility and due diligence, appraisal, approval, documentation, disbursement, monitoring, compliance and closure. Information sits across documents, the loan origination system (LOS), core banking, e-mail and reporting tools."),
   B("**Slow and manual:** documents arrive by e-mail and are re-keyed; analysts spread financials by hand and write credit memos from scratch."),
