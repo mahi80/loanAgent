@@ -359,9 +359,19 @@ def deck_a2():
         "Prototype (working): |orders + inventory + capacity + PMI/Brent/construction → sensing model → Deviation → Impact → Constraint → Recommender agents → planner approval → SAP STO / planned order / IBP update (mocked).",
         "Ask: |8-week POC on one product family across two regions with real SAP/IBP extracts, run in shadow mode next to the S&OP process.",
     ], 0.5, 2.75, 12.3, 4.2, 15)
+    d.notes(s, "TALK TRACK (30 sec) - Name the problem, not the technology.\n"
+            "\"Demand changes faster than our planning cycle. We plan monthly; by the time we see a deviation it is ~4 weeks old. "
+            "That gives us stockouts in one region, excess in another, and planners firefighting instead of planning. "
+            "We looked at where AI and agents close that gap - and we recommend one place to start.\"\n"
+            "Preview the ask (last bullet): an 8-week POC in shadow mode.")
 
     s = d.slide("Current process: deviations wait for the monthly S&OP (PCE 3.7%)", "Problem & current process · Lean VSM")
     d.image(s, IMG / "a2_vsm_block.png", 0.3, 1.25, 12.7, 5.75)
+    d.notes(s, f"TALK TRACK (1 min) - Show the discipline before the answer.\n"
+            f"\"We mapped the process before choosing any AI. Signal-to-action takes {cur['lead_time_d']:.1f} days and only {cur['pce']:.1%} of that adds value "
+            f"- the rest is waiting, re-keying and email. {cur['steps_over_takt']:.0f} steps run slower than demand requires (takt {a.takt_h:.2f} h); "
+            f"the bottleneck is {cur['bottleneck'].lower()}.\"\n"
+            "Lead with these two numbers - they matter more to a CIO than any model detail. Step times are mocked; validated in POC week 1.")
 
     s = d.slide("Use-case opportunity map: 7 opportunities, each tied to a KPI and an owner", "Opportunity map")
     d.table(s, [["Use case", "Business problem", "AI / agent approach", "Data required", "Action → human involvement",
@@ -369,7 +379,14 @@ def deck_a2():
             [[f"{r.id} {r.use_case} (wave {r.wave})", r.business_problem, r.ai_agent_approach, r.data_required,
               f"{r.action_taken} → {r.human_involvement}", f"{r.kpi} · {r.expected_benefit}"] for r in opp.itertuples()],
             0.3, 1.25, 12.75, 5.7, 7, [1.3, 2.0, 2.2, 2.0, 2.6, 2.2])
-    d.notes(s, "Data required per use case is in a2_chem_demand/data/opportunities.csv and the app's Opportunity map tab.")
+    d.notes(s, "TALK TRACK (2 min) - Do not read the table; point at the structure, then summarise by wave.\n"
+            "\"Every use case has the same seven-part card: business problem, AI/agent approach, data required, action taken, "
+            "human involvement, KPI and expected benefit. We scored them on value x feasibility into three waves.\"\n"
+            "Wave 1 (now): UC1 demand sensing + agentic response, UC2 stockout/excess - highest value, data already in ERP.\n"
+            "Wave 2 (next): UC3 inventory optimisation, UC4 shipment exceptions, UC7 invoice/AP (stand-alone quick win).\n"
+            "Wave 3 (later): UC5 lane optimisation, UC6 supply disruption - big value, needs external data and network change.\n"
+            "\"Together roughly $50-75M a year run-rate plus a $40-60M one-off working-capital release - planning assumptions the POC will confirm or correct.\"\n"
+            "If asked about data readiness: point at the 'Data required' column. Source: a2_chem_demand/data/opportunities.csv.")
 
     s = d.slide("Prioritisation: demand sensing first - fixes the #1 bottleneck", "Prioritisation")
     d.image(s, IMG / "a2_opportunity_matrix.png", 0.3, 1.3, 5.6, 4.6)
@@ -379,6 +396,10 @@ def deck_a2():
         "Wave 2: |UC3 inventory optimisation, UC4 shipment exceptions, UC7 invoice automation (quick win).",
         "Wave 3: |UC5 network/lane optimisation, UC6 supply disruption prediction.",
     ], 6.0, 5.3, 6.9, 1.7, 12)
+    d.notes(s, "TALK TRACK (1 min) - The decisive argument for UC1.\n"
+            "\"Demand sensing is the foundation. Inventory optimisation, stockout prediction and distribution planning all need a better signal. "
+            "Fix the signal first and every later use case becomes cheaper and more accurate. It also attacks the #1 bottleneck in our value stream "
+            "(highest Automation Priority Index, right-hand chart).\"")
 
     s = d.slide("Solution: an agent loop that turns a demand signal into an approved action", "Proposed AI / agent solution")
     d.image(s, IMG / "a2_agent_flow.png", 0.3, 1.25, 12.7, 3.2)
@@ -389,9 +410,16 @@ def deck_a2():
                 ["Recommender", "Costs transfer / pull-forward / expedite / allocation; least-cost plan", "LLM explains, never sets qty"],
                 ["Executor", "STO, planned order, aATP allocation, IBP key figure, notifications", "Only after approval"]],
             0.5, 4.55, 12.3, 2.4, 10, [1.3, 7.0, 2.6])
+    d.notes(s, "TALK TRACK - It is an agentic response loop, not just a forecast.\n"
+            "\"Signal -> forecast -> deviation -> impact -> constraint check -> recommendation -> human approval -> SAP action. "
+            "Each agent has one job and a guardrail: deterministic code sets every quantity and cost, the LLM explains, and nothing is written to SAP before approval.\"")
 
     s = d.slide("Architecture: SAP-integrated, ML + LLM, human-approved writes", "Architecture")
     d.image(s, IMG / "a2_architecture.png", 0.3, 1.2, 12.7, 5.8)
+    d.notes(s, "TALK TRACK (1 min) - Trust and control: what a CIO actually worries about.\n"
+            "\"The AI never moves inventory on its own. Models do the maths, the LLM explains, a planner approves every action and larger ones escalate. "
+            "Every decision is audit-logged. SAP is reached only through allow-listed tools; identity, observability and security are in from day one. "
+            "It is model- and cloud-agnostic - AWS and Azure references are in the appendix.\"")
 
     s = d.slide("Demo: EPX-200 epoxy resin in APAC, from signal to SAP in one flow", "Working prototype · streamlit run a2_chem_demand/app.py")
     d.image(s, IMG / "a2_forecast.png", 0.3, 1.25, 6.5, 2.9)
@@ -404,6 +432,12 @@ def deck_a2():
         f"Recommend: |transfer + pull-forward + expedite + allocation: cost ${t['cost_usd']:,.0f} vs ${t['benefit_usd']:,.0f} margin protected.",
         f"Approve & act: |routed to {c['recommendation']['approval_level']} (> $50k); a planner without authority is blocked; approval creates SAP STO, planned order and IBP update (mocked) plus a notification.",
     ], 0.5, 4.3, 12.3, 2.7, 12)
+    d.notes(s, f"TALK TRACK (2 min) - Show it working; switch to the live app if possible (http://localhost:8502).\n"
+            f"\"In the backtest, forecast error drops from {S.mape_plan:.1%} (current plan) to {S.mape_model:.1%} - about "
+            f"{1 - S.mape_model / S.mape_plan:.0%} better, in line with the 35% -> 22% industry assumption. "
+            f"For EPX-200 in APAC the agents find the spike, trace it to the customer driving it, check stock and capacity and propose a plan costing ${t['cost_usd']:,.0f} "
+            f"that protects ${t['benefit_usd']:,.0f} - about ${t['net_value_usd']:,.0f} net. It is over $50k, so it routes to the {c['recommendation']['approval_level']}.\"\n"
+            "Demo tip: approve as a planner first to show the authority block, then as the S&OP Lead.")
 
     s = d.slide("Business impact: before vs after (assumptions stated)", "Business impact")
     d.table(s, ba_rows(csv, 120), 0.5, 1.35, 6.3, 3.4, 11, [3, 1, 1, 1.4])
@@ -418,6 +452,9 @@ def deck_a2():
         "Assumptions: |$5B revenue manufacturer, ~120 significant demand exceptions/month, 12 SKUs × 4 regions in the prototype; step times mocked; benefits ranges to be validated with the client's SAP history in POC weeks 1-2.",
         "Measured in prototype: |backtest WMAPE over 16 weekly origins on synthetic data (sensing vs frozen plan vs 13-week moving average).",
     ], 0.5, 5.0, 12.3, 1.9, 12)
+    d.notes(s, f"TALK TRACK - Lead time {cur['lead_time_d']:.1f} -> {fut['lead_time_d']:.1f} days; PCE {cur['pce']:.1%} -> {fut['pce']:.0%}.\n"
+            "Present every dollar figure as a planning assumption the POC validates against the client's own SAP history - that builds credibility. "
+            "Forecast accuracy is the enabler; the money comes from fewer stockouts, less E&O and less premium freight, plus planner time redeployed.")
 
     s = d.slide("POC: 8 weeks, one product family, two regions, shadow mode", "POC approach")
     d.table(s, [["Weeks", "Milestone", "Exit criteria"],
@@ -431,6 +468,11 @@ def deck_a2():
     d.card(s, "Data required", "Orders/shipments, inventory by DC, production plans &\ncapacity, lanes & freight rates, promos, PMI/feedstock", 8.3, 3.05, 4.5, 1.55, size=11)
     d.card(s, "KPIs", "WMAPE & bias · detection lag · alert precision ·\nacceptance rate · OTIF · expedite cost · planner hours", 0.5, 4.85, 6.1, 1.95, size=11)
     d.card(s, "Risks & mitigations", "Data quality / master data → profiling in week 1\nSAP access → sandbox + mocked APIs first\nPlanner trust → explain every alert, edit before approve\nScope creep → one family, two regions", 6.75, 4.85, 6.05, 1.95, size=11, head_color=ORANGE)
+    d.notes(s, "TALK TRACK (30 sec) - End with a decision.\n"
+            "\"We are asking for an 8-week POC on one product family, in shadow mode next to S&OP, with real SAP/IBP data. "
+            "Success means at least 20% better forecast error, detection-to-action under a week, and planners accepting at least 60% of recommendations. "
+            "If it hits those, wave 1 scales and wave 2 starts.\"\n"
+            "Requests: business sponsor + demand-planning lead, SAP/IBP extracts, a sandbox, choice of LLM platform.")
 
     s = d.slide("Production roadmap: from one loop to an autonomous-with-oversight supply chain", "Production roadmap")
     for i, (h, b) in enumerate([
@@ -449,6 +491,11 @@ def deck_a2():
            "signals, DC inventory, plant capacity and lanes, with two injected events (APAC epoxy project ramp; EU PVC outage). "
            "VSM step times mocked; financial benefits are ranges for a ~$5B manufacturer. SAP/IBP calls are mocked payloads.",
            0.5, 5.65, 12.3, 1.25, fill=LIGHT, head_color=GREY, size=10)
+    d.notes(s, "TALK TRACK - One loop today, a governed autonomous-with-oversight supply chain over 24 months.\n"
+            "Each wave reuses the same platform (feature store, orchestrator, approval and audit services), so cost per use case falls. "
+            "Auto-approval of low-value actions comes only in the last phase, within policy.\n"
+            "Expected questions: data readiness (opportunity map 'Data required'); SAP integration (allow-listed MCP tools over SAP BTP); "
+            "AI errors (recommends, never decides; edits and rejections tracked); benefits (validated in POC weeks 1-2).")
     appendix_deployment(d, "a2")
     d.save(HERE / "A2_Chemical_Demand_Deck.pptx")
 
