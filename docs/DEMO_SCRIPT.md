@@ -163,7 +163,14 @@ Walk the expanders, about 20 seconds each:
 **Say:**
 > "Analysts can ask the policy in plain English. Every answer cites the clause, and arithmetic like authority thresholds is done by a rules engine, so it's always right."
 
-*Optional:* tab **📥 New application** shows that you can upload a new application and documents, or a policy addendum that is re-indexed instantly.
+*Optional, live upload (2 min):*
+1. Go to tab **📥 New application**. Keep the default form values: Northwind Packaging, term_loan, $3M, 5 years, 0.100.
+2. Click **Upload** and select all 4 files in `a1_loan_lifecycle/data/sample_upload/1_complete_term_loan/`.
+3. Click **Ingest application**. The ingestion report shows each file's classification, and the new `UPL-xxxx` application is selected in the sidebar automatically.
+4. Click **▶ Run agent pipeline** and open tab **①**. Expected result: DSCR 1.89x, LTV 55% → **APPROVE**, routed to Senior Credit Officer.
+
+Use the `2_missing_docs_term_loan` pack (2 files) to show **REQUEST INFO** instead.
+> "New applications come in through the same pipeline. Documents are classified, screened and extracted automatically."
 
 ---
 

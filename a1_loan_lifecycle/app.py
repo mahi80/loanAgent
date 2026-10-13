@@ -43,7 +43,9 @@ with st.sidebar:
 user = auth.sign_in(DEMO_USERS, ROLES)
 with st.sidebar:
     st.caption(f"LLM mode: **{orch.llm.mode}** · model `{orch.llm.model_name}` · auth: {user.method}")
-    app_id = st.selectbox("Loan application", list(apps),
+    if "pending_app" in st.session_state:  # a just-ingested application becomes the selected one
+        st.session_state.app_sel = st.session_state.pop("pending_app")
+    app_id = st.selectbox("Loan application", list(apps), key="app_sel",
                           format_func=lambda k: f"{k} · {apps[k]['borrower']} · ${apps[k]['amount_usd'] / 1e6:.1f}M")
     can_run = auth.has_role(user, ROLES, "Credit Analyst")
     if st.button("▶ Run agent pipeline", type="primary", use_container_width=True, disabled=not can_run,
@@ -86,12 +88,19 @@ with tab_new:
                      "relationship_manager": user.name}, [(f.name, f.getvalue()) for f in files or []], user.username)
                 orch.audit.record(new_app["application_id"], user.username, "application.ingested",
                                   {"documents": new_app["ingestion_report"]})
-                st.success(f"Ingested **{new_app['application_id']}** - select it in the sidebar and run the pipeline.")
-                st.dataframe(pd.DataFrame(new_app["ingestion_report"]), hide_index=True, use_container_width=True)
+                st.session_state.pending_app = new_app["application_id"]
+                st.session_state.ingested = new_app
+                st.rerun()
             except ValueError as e:
                 st.error(str(e))
-        st.caption("Tip: try the sample documents in `a1_loan_lifecycle/data/documents/` - classification uses "
-                   "filename and content keywords.")
+        if "ingested" in st.session_state:
+            new_app = st.session_state.ingested
+            st.success(f"Ingested **{new_app['application_id']} · {new_app['borrower']}** - it is now selected in the "
+                       "sidebar: click **▶ Run agent pipeline**, then open tab **① Origination → Decision**.")
+            st.dataframe(pd.DataFrame(new_app["ingestion_report"]), hide_index=True, use_container_width=True)
+        st.caption("Tip: upload a ready-made pack from `a1_loan_lifecycle/data/sample_upload/` - "
+                   "`1_complete_term_loan` (all 4 documents → approve) or `2_missing_docs_term_loan` "
+                   "(2 documents → request info). Classification uses filename and content keywords.")
     st.divider()
     st.subheader("Policy corpus (RAG) - add an addendum and re-index")
     st.write(f"Indexed clauses: **{len(orch.retriever.clauses)}**")
