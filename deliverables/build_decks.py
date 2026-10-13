@@ -163,6 +163,30 @@ class Deck:
         print("wrote", path.name, f"({min(self.n, 10)} main slides + {max(self.n - 10, 0)} appendix)")
 
 
+def api_note(csv, a, top=3) -> str:
+    """Speaker-note text explaining the Automation Priority Index with worked examples from the VSM data."""
+    cur, pr = vsm.state(vsm.load(csv), a), vsm.priority(vsm.load(csv), a)
+    lines = ["",
+             "HOW THE API (AUTOMATION PRIORITY INDEX) IS CALCULATED",
+             "API = NVA hours (manual touch + wait) x agent feasibility (1-5) x bottleneck factor / 10",
+             "- NVA hours: non-value-added touch time + wait time per unit (1 wait day = 8 h).",
+             "- Feasibility: how reliably an agent can do the step (data, maturity, risk); 1 = keep human, 5 = ideal for an agent.",
+             f"- Bottleneck factor: effective cycle time / takt time, minimum 1. Effective CT = (VA + NVA) / FTE; takt = {a.takt_h:.2f} h.",
+             "- / 10 only scales the number for readability.",
+             "Worked examples:"]
+    for r in pr.head(top).itertuples():
+        c = cur.loc[cur.step == r.step].iloc[0]
+        lines.append(f"#{r.rank} {r.step}: NVA {c.nva_h:g} h + wait {c.wait_d:g} d x 8 = {r.nva_total_h:g} h; feasibility {r.feasibility}; "
+                     f"CT ({c.va_h:g} + {c.nva_h:g}) / {c.fte} FTE = {c.eff_ct_h:g} h -> bottleneck {c.eff_ct_h:g} / {a.takt_h:.2f} = {r.bottleneck_factor:g}; "
+                     f"API = {r.nva_total_h:g} x {r.feasibility} x {r.bottleneck_factor:g} / 10 = {r.api:g}")
+    low = pr[pr.feasibility <= 2]
+    for r in low.itertuples():
+        lines.append(f"Low on purpose - #{r.rank} {r.step}: lots of waiting ({r.nva_total_h:g} h) but feasibility {r.feasibility} "
+                     f"because the decision stays human, so API = {r.api:g}.")
+    lines.append("Step times and feasibility scores are mocked assumptions; the formula is code (shared/vsm.py) and inputs are re-measured in POC week 1.")
+    return "\n".join(lines)
+
+
 def ba_rows(csv, demand):
     df = vsm.before_after(vsm.load(csv), vsm.Assumptions(demand))
     return [list(df.columns)] + df.astype(str).values.tolist()
@@ -255,7 +279,8 @@ def deck_a1():
     d.notes(s, "TALK TRACK (1 min) - Agents go where the waste is, not everywhere.\n"
             "\"We ranked every step by waste hours x feasibility x bottleneck. Document completeness and appraisal/memo come first. "
             "Approval ranks low on purpose - the decision stays human; agents only prepare and route the pack. "
-            "We add continuous portfolio early warning instead of waiting for the quarterly covenant test.\"")
+            "We add continuous portfolio early warning instead of waiting for the quarterly covenant test.\""
+            + api_note(csv, a))
 
     s = d.slide("Agent ecosystem: seven specialist agents, one orchestrator, one human gate", "Proposed AI / agent solution")
     d.image(s, IMG / "a1_agent_flow.png", 0.3, 1.25, 12.7, 3.2)
@@ -440,7 +465,8 @@ def deck_a2():
     d.notes(s, "TALK TRACK (1 min) - The decisive argument for UC1.\n"
             "\"Demand sensing is the foundation. Inventory optimisation, stockout prediction and distribution planning all need a better signal. "
             "Fix the signal first and every later use case becomes cheaper and more accurate. It also attacks the #1 bottleneck in our value stream "
-            "(highest Automation Priority Index, right-hand chart).\"")
+            "(highest Automation Priority Index, right-hand chart).\""
+            + api_note(csv, a))
 
     s = d.slide("Solution: an agent loop that turns a demand signal into an approved action", "Proposed AI / agent solution")
     d.image(s, IMG / "a2_agent_flow.png", 0.3, 1.25, 12.7, 3.2)
